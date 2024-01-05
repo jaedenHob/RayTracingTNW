@@ -118,7 +118,7 @@ const CanvasComponentTriangle2 = () => {
     let gl = canvas.getContext('webgl2')
 
     let aspect = canvas.width / canvas.height;
-    let scale = 0.5;
+    let scale = 0.1;
 
     if (!gl) {
       gl = canvas.getContext('experimental-webgl');
@@ -134,9 +134,20 @@ const CanvasComponentTriangle2 = () => {
 
     const programInfo = twgl.createProgramInfo(gl, [animateShaders.vs, animateShaders.fs]);
 
+    // circle information
+    const totalSegments = 60;
+    const circleVertices = [0, 0, 0];
+
+    for (let i = 0; i <= totalSegments; i++) {
+      const theta = (i / totalSegments) * 2 * Math.PI;
+      const x = Math.cos(theta);
+      const y = Math.sin(theta);
+      circleVertices.push(x, y, 0);
+    }
+
     const vertexAttributes = {
-      position: { numComponents: 2, data: [1, 0, 0, 1, -1, -1] },
-      color: { numComponents: 3, data: [1, 0, 0, 0, 1, 0, 0, 0, 1] }
+      position: { numComponents: 2, data: new Float32Array(circleVertices) },
+      color: { numComponents: 3, data: new Float32Array(circleVertices.length * 3 / 2).fill(1) }
     };
 
     const uniforms = {
