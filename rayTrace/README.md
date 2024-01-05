@@ -1,8 +1,6 @@
-# React + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+Initial repository. My goal is to render a scene
+through ray tracing first by getting the concepts
+down through a 2d scenario before trying
+an implementation on a 3d scene with varying shapes.
+Once that is done I may look into trying to test different
+material type on shapes like metal, plastic, or glass.
