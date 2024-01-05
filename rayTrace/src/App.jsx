@@ -228,7 +228,7 @@ function App() {
       <p>
         I have never used webgl in reactjs before so going full circle I am applying the very 
       <br/> first time I learned webgl and created a triangle back when I was learning computer
-      <br /> at University of Central Florida.
+      <br /> graphics back at the University of Central Florida.
       </p>
 
       <br />
