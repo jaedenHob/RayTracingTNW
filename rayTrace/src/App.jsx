@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef} from 'react'
 import * as twgl from 'twgl.js';
 import './App.css'
 
@@ -110,6 +110,7 @@ const CanvasComponentTriangle2 = () => {
   const canvasRef = useRef(null);
   const translationRef = useRef([0, 0]);
   const isDraggingRef = useRef(false);
+
   
   useEffect(() => {
 
@@ -166,10 +167,14 @@ const CanvasComponentTriangle2 = () => {
     const handleMouseMove = (e) => {
       if (isDraggingRef.current) {
         const rect = canvas.getBoundingClientRect();
-        const x = (e.clientX - rect.left) / rect.width * 2 - 1;
-        const y = -(e.clientY - rect.top) / rect.height * 2 + 1;
+
+        const x = (e.clientX - 700) / canvas.width * 20 + 1;
+        const y = -(e.clientY - 400) / canvas.height * 15 + 2;
+
 
         translationRef.current = [x, y];
+
+        console.log(translationRef.current);
       }
     };
 
@@ -236,7 +241,7 @@ function App() {
       <h1>Light Source and rays (Ray Casting) </h1>
       <CanvasComponentTriangle2 />
       <p>
-        Here is we have a vusual of a circle being used as a light source around rooms
+        Here is we have a visual of a circle being used as a light source around rooms
         <br /> Rays are given off in all direction hiting walls and that is what we can see. 
       </p>
     </>
