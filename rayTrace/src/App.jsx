@@ -1,5 +1,6 @@
 import { useEffect, useRef} from 'react'
 import * as twgl from 'twgl.js';
+import p5 from 'p5';
 import './App.css'
 
 const shaders = {
