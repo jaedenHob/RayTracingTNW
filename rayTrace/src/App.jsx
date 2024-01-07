@@ -225,31 +225,46 @@ function App() {
 
   return (
     <>
-      <h1>Raytracing Project</h1>
+      <h1>Ray Tracing Project</h1>
 
-      
       <p>
-        <br />After my computer graphics course in college I enjoyed the process of designing a game using all 
-        <br />the techniques that was learned. However, I felt that there was a valuable learning  experience I missed
-        <br />out on building a ray tracer. So this project will aim to do just that. My process begun by reading
-        <br />up on it in 
-        <a href='https://raytracing.github.io/books/RayTracingInOneWeekend.html#overview'> ray tracing in one weekend</a>.  The reference material is in C++, but I will stick to what 
-        <br />I'm used to with javascript and webgl. Ray tracing is a complex subject so I don't expect
-        <br />to complete this in one weekend, but lets see I how far I can get.
+    <br />After my computer graphics course in college I enjoyed the process of designing a game using all 
+    <br />the techniques that was learned. However, I felt that there was a valuable learning  experience I missed
+    <br />out on building a ray tracer. So this project will aim to do just that. My process begun by reading
+    <br />up on it in 
+    <a href='https://raytracing.github.io/books/RayTracingInOneWeekend.html#overview'> ray tracing in one weekend</a>.  The reference material is in C++, but I will stick to what 
+    <br />I'm accustomed  to with javascript and webgl. Ray tracing is a complex subject so I don't expect
+    <br />to complete this in one weekend, but lets see I how far I can get.
       </p>    
 
       <h1>Triangle Webgl Render</h1>
+
       <CanvasComponentTriangle />
+
       <p>
         I have never used webgl in reactjs before so going full circle I am applying the very 
-      <br/> first time I learned webgl and created a triangle back when I was learning computer
-      <br /> graphics back at the University of Central Florida.
+  <br />first time I learned webgl and created a triangle back when I was learning computer
+  <br />graphics back at the University of Central Florida.
       </p>
 
       <br />
 
       <h1>Light Source and rays (Ray Casting) </h1>
+
+      <p>
+        So first to simplify things to get the concepts and the logic down. I'll do ray casting.
+  <br/> Both ray tracing and ray casting involve sending rays out through every pixel of an image
+  <br />mimmicing the behavior of light. The difference is that ray casting will stop at the first hit,
+  <br />while the latter is calculated recursively since when a ray of light hits it reflects or splits
+  <br />many times which is very exspensive computationally. Doing it in 2D also simplifies things as well.
+      </p>
+
+      <br />
+
       <CanvasComponentTriangle2 />
+
+      {/* <button onClick={() => handleRenderButtonClick('triangle')}>Render Triangle</button> */}
+
       <p>
         Here is we have a visual of a circle being used as a light source around rooms
         <br /> Rays are given off in all direction hiting walls and that is what we can see. 
