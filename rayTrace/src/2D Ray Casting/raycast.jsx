@@ -1,6 +1,5 @@
 import React, {useState} from 'react'
 import { ReactP5Wrapper } from "@p5-wrapper/react";
-// import MouseTracker from './MouseTracker';
 
 function sketch(p5) {
 
@@ -39,16 +38,20 @@ function sketch(p5) {
             const denominator = (x1 - x2) * (y3 - y4) - (y1 - y2) * (x3 - x4);
 
             if (denominator == 0) {
-                return false;
+                return;
             }
 
             const t = ((x1 - x3) * (y3 - y4) - (y1 - y3) * (x3 - x4)) / denominator;
             const u = -((x1 - x2) * (y1 - y3) - (y1 - y2) * (x1 - x3)) / denominator;
 
-            if (t > 0 && t < 1) {
-                return true;
+            if (t > 0 && t < 1 && u > 0) {
+                const pt = p5.createVector();
+                pt.x = x1 + t * (x2 - x1);
+                pt.y = y1 + t * (y2 - y1);
+
+                return pt;
             } else {
-                return false;
+                return;
             }
 
         }
@@ -72,7 +75,7 @@ function sketch(p5) {
     let ray;
 
     p5.setup = () => {
-        p5.createCanvas(400, 400);
+        p5.createCanvas(800, 600);
 
        obstacle = new Boundary(300, 100, 300, 300);
        ray = new Ray(100, 200);
@@ -84,14 +87,13 @@ function sketch(p5) {
 
         obstacle.show();
         ray.show();
-        // ray.lookAt(mouseX, mouseY);
+        ray.lookAt(p5.mouseX, p5.mouseY);
 
         let pt = ray.intersect(obstacle);
 
         if (pt) {
-            // p5.stroke(255);
-            // p5.ellipse(pt.x, pt.y, 8, 8);
-            console.log(pt);
+            p5.stroke(255);
+            p5.ellipse(pt.x, pt.y, 8, 8);
         }
 
     };
