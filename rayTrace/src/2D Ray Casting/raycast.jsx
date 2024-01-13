@@ -18,9 +18,9 @@ function sketch(p5) {
 
     // define the rays from our exaple light source
     class Ray {
-        constructor(x, y) {
-            this.pos = p5.createVector(x, y);
-            this.dir = p5.createVector(1, 0);
+        constructor(pos, angle) {
+            this.pos = pos;
+            this.dir = p5.constructor.Vector.fromAngle(angle);
         }
 
         //  function for detecting if a ray contacts a wall
@@ -71,14 +71,55 @@ function sketch(p5) {
         }
     }
 
+    class Particle {
+        constructor() {
+            this.pos = p5.createVector(800 / 2, 600 / 2);
+            this.rays = [];
+
+            for (let degree = 0; degree < 360; degree += 2) {
+                this.rays.push(new Ray(this.pos, p5.radians(degree)));
+            }
+        }
+
+        show() {
+            p5.fill(255);
+            p5.ellipse(this.pos.x, this.pos.y, 12);
+            for (let ray of this.rays) {
+                ray.show();
+            }
+        }
+
+        contacts(wall) {
+            for (let ray of this.rays) {
+                const pt = ray.intersect(wall);
+
+                if (pt) {
+                    p5.line(this.pos.x, this.pos.y, pt.x, pt.y); // rays that stop at a boundary
+                }
+                else {
+                    // p5.line(this.pos.x, this.pos.y, this.pos.x + 800, this.pos.y + 800) // rays that don't stop at a boundary
+                }
+            }
+        }
+
+        update(x, y) {
+            if ((x >= 0 && x <= 800) && (y >= 0 && y <= 600))
+                this.pos.set(x, y);        
+        }
+    }
+
+
     let obstacle;
     let ray;
+    let particle;
 
     p5.setup = () => {
         p5.createCanvas(800, 600);
 
        obstacle = new Boundary(300, 100, 300, 300);
+
        ray = new Ray(100, 200);
+       particle = new Particle();
     }
 
     p5.draw = () => {
@@ -86,15 +127,22 @@ function sketch(p5) {
         p5.stroke(255);
 
         obstacle.show();
-        ray.show();
-        ray.lookAt(p5.mouseX, p5.mouseY);
 
-        let pt = ray.intersect(obstacle);
 
-        if (pt) {
-            p5.stroke(255);
-            p5.ellipse(pt.x, pt.y, 8, 8);
-        }
+        particle.update(p5.mouseX, p5.mouseY);
+        particle.show();
+        particle.contacts(obstacle);
+
+
+        // ray.show();
+        // ray.lookAt(p5.mouseX, p5.mouseY);
+
+        // let pt = ray.intersect(obstacle);
+
+        // if (pt) {
+        //     p5.stroke(255);
+        //     p5.ellipse(pt.x, pt.y, 8, 8);
+        // }
 
     };
 }
