@@ -66,7 +66,7 @@ function sketch(p5) {
             p5.stroke(255);
             p5.push();
             p5.translate(this.pos.x, this.pos.y);
-            p5.line(0, 0, this.dir.x * 10, this.dir.y * 10);
+            p5.line(0, 0, this.dir.x * 1000, this.dir.y * 1000);
             p5.pop();
         }
     }
@@ -76,7 +76,7 @@ function sketch(p5) {
             this.pos = p5.createVector(800 / 2, 600 / 2);
             this.rays = [];
 
-            for (let degree = 0; degree < 360; degree += 2) {
+            for (let degree = 0; degree < 360; degree += 1) {
                 this.rays.push(new Ray(this.pos, p5.radians(degree)));
             }
         }
@@ -84,9 +84,9 @@ function sketch(p5) {
         show() {
             p5.fill(255);
             p5.ellipse(this.pos.x, this.pos.y, 12);
-            for (let ray of this.rays) {
-                ray.show();
-            }
+            // for (let ray of this.rays) {
+            //     ray.show();
+            // }
         }
 
         contacts(wall) {
@@ -97,6 +97,8 @@ function sketch(p5) {
                     p5.line(this.pos.x, this.pos.y, pt.x, pt.y); // rays that stop at a boundary
                 }
                 else {
+                    ray.show();
+                    // console.log(ray.pos);
                     // p5.line(this.pos.x, this.pos.y, this.pos.x + 800, this.pos.y + 800) // rays that don't stop at a boundary
                 }
             }
