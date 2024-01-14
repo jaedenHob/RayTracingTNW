@@ -16,7 +16,34 @@ function sketch(p5) {
         }
     };
 
-    // define the rays from our exaple light source
+    class shapeBoundary {
+        constructor(x, y, x2, y2) {
+            this.a = p5.createVector(x, y);
+            this.b = p5.createVector(x2, y2);
+        }
+
+        show() {
+            p5.stroke(255);
+            p5.line(this.a.x, this.a.y, this.b.x, this.b.y);
+        }
+    };
+
+    // classes of varying shapes
+    class Square {
+        constructor(x, y, size) {
+            this.pos = p5.createVector(x , y);
+            this.walls = [];
+            
+        }
+
+        show() {
+            for (let side of this.walls) {
+                side.show();
+            }
+        }
+    }
+
+    // define the ray from our exaple light source
     class Ray {
         constructor(pos, angle) {
             this.pos = pos;
@@ -71,12 +98,13 @@ function sketch(p5) {
         }
     }
 
+// this will be considered our light source
     class Particle {
         constructor() {
             this.pos = p5.createVector(800 / 2, 600 / 2);
             this.rays = [];
 
-            for (let degree = 0; degree < 360; degree += 1) {
+            for (let degree = 0; degree < 360; degree += 10) {
                 this.rays.push(new Ray(this.pos, p5.radians(degree)));
             }
         }
@@ -84,22 +112,30 @@ function sketch(p5) {
         show() {
             p5.fill(255);
             p5.ellipse(this.pos.x, this.pos.y, 12);
-            // for (let ray of this.rays) {
-            //     ray.show();
-            // }
         }
 
-        contacts(wall) {
+        contacts(walls) {
+            let pt;
+            let max;
+            let distance;
             for (let ray of this.rays) {
-                const pt = ray.intersect(wall);
+                max = Infinity;
+                let closest = null;
+                for (let wall of walls) {
+                    pt = ray.intersect(wall);
 
-                if (pt) {
-                    p5.line(this.pos.x, this.pos.y, pt.x, pt.y); // rays that stop at a boundary
+                    if (pt) {
+                        distance = p5.constructor.Vector.dist(this.pos, pt);
+                        if (distance < max) {
+                            max = distance;
+                            closest = pt;
+                        }
+                    }
                 }
-                else {
-                    ray.show();
-                    // console.log(ray.pos);
-                    // p5.line(this.pos.x, this.pos.y, this.pos.x + 800, this.pos.y + 800) // rays that don't stop at a boundary
+                if (closest) {
+                    p5.line(this.pos.x, this.pos.y, closest.x, closest.y); // rays that stop at a boundary
+                } else {
+                    ray.show(); // rays that don't stop at a boundary
                 }
             }
         }
@@ -110,41 +146,47 @@ function sketch(p5) {
         }
     }
 
-
+    // local variables
     let obstacle;
-    let ray;
+    let obstacle2;
+    let allBounds = [];
     let particle;
+    let square;
 
+    // set up things in the environment
     p5.setup = () => {
         p5.createCanvas(800, 600);
 
-       obstacle = new Boundary(300, 100, 300, 300);
+       obstacle = new Boundary(750, 100, 750, 500);
 
-       ray = new Ray(100, 200);
+       obstacle2 = new Boundary(500, 100, 500, 500);
+       
+       allBounds.push(obstacle);
+       allBounds.push(obstacle2);
+
+       square = new Square(300, 400, 50);
+
        particle = new Particle();
     }
 
+    // draw onto the world
     p5.draw = () => {
         p5.background(0);
         p5.stroke(255);
 
         obstacle.show();
 
+        obstacle2.show();
+
+        // square.show();
+
 
         particle.update(p5.mouseX, p5.mouseY);
         particle.show();
-        particle.contacts(obstacle);
+        particle.contacts(allBounds);
 
-
-        // ray.show();
-        // ray.lookAt(p5.mouseX, p5.mouseY);
-
-        // let pt = ray.intersect(obstacle);
-
-        // if (pt) {
-        //     p5.stroke(255);
-        //     p5.ellipse(pt.x, pt.y, 8, 8);
-        // }
+        // particle.contacts(obstacle);
+        // particle.contacts(obstacle2);
 
     };
 }
