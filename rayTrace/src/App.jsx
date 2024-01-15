@@ -152,8 +152,8 @@ function App() {
       {/* <button onClick={() => handleRenderButtonClick('triangle')}>Render Triangle</button> */}
 
       <p>
-        Here is we have a visual of a circle being used as a light source around rooms
-        <br /> Rays are given off in all direction hiting walls and that is what we can see. 
+        Here is we have a point giving rays in all directions and follows the users cursor.
+        <br /> when a ray contacts a wall it no longer draws further than the contact point.
       </p>
     </>
   )

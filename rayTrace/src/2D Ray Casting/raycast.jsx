@@ -16,24 +16,79 @@ function sketch(p5) {
         }
     };
 
-    class shapeBoundary {
-        constructor(x, y, x2, y2) {
-            this.a = p5.createVector(x, y);
-            this.b = p5.createVector(x2, y2);
-        }
-
-        show() {
-            p5.stroke(255);
-            p5.line(this.a.x, this.a.y, this.b.x, this.b.y);
-        }
-    };
-
     // classes of varying shapes
     class Square {
         constructor(x, y, size) {
             this.pos = p5.createVector(x , y);
+            this.size = size;
+            this.walls = []; 
+
+            this.walls.push(new Boundary(this.pos.x, this.pos.y, this.pos.x + size, this.pos.y));
+            this.walls.push(new Boundary(this.pos.x, this.pos.y, this.pos.x, this.pos.y + size));
+            this.walls.push(new Boundary(this.pos.x + size, this.pos.y, this.pos.x + size, this.pos.y + size));
+            this.walls.push(new Boundary(this.pos.x + size, this.pos.y + size, this.pos.x, this.pos.y + size));
+
+        }
+
+        show() {
+            for (let side of this.walls) {
+                side.show();
+            }
+        }
+    }
+
+    class Rectangle {
+        constructor(x, y, size) {
+            this.pos = p5.createVector(x, y);
+            this.size = size;
             this.walls = [];
-            
+
+            this.walls.push(new Boundary(this.pos.x, this.pos.y, (this.pos.x + size * 2), this.pos.y));
+            this.walls.push(new Boundary(this.pos.x, this.pos.y, this.pos.x, this.pos.y + size));
+            this.walls.push(new Boundary((this.pos.x + size * 2), this.pos.y, (this.pos.x + size * 2), this.pos.y + size));
+            this.walls.push(new Boundary((this.pos.x + size * 2), this.pos.y + size, this.pos.x, this.pos.y + size));
+
+        }
+
+        show() {
+            for (let side of this.walls) {
+                side.show();
+            }
+        }
+    }
+
+    class Triangle {
+        constructor(x, y, size) {
+            this.pos = p5.createVector(x, y);
+            this.size = size;
+            this.walls = [];
+
+            this.walls.push(new Boundary(this.pos.x, this.pos.y, this.pos.x + size, this.pos.y - size));
+            this.walls.push(new Boundary(this.pos.x, this.pos.y, (this.pos.x + size * 2), this.pos.y));
+            this.walls.push(new Boundary(this.pos.x + size, this.pos.y - size, (this.pos.x + size * 2), this.pos.y));
+        }
+
+        show() {
+            for (let side of this.walls) {
+                side.show();
+            }
+        }
+    }
+
+    class Circle {
+        constructor(x, y, size, totalPoints) {
+            this.totalPoints = totalPoints;
+            this.pos = p5.createVector(x, y);
+            this.size = size;
+            this.angle = (2 * Math.PI) / this.totalPoints;
+            this.walls = [];
+
+            for (let i = 0; i < 100; i++) {
+                this.walls.push(new Boundary(this.pos.x + size * Math.cos(i * this.angle),
+                                             this.pos.y + size * Math.sin(i * this.angle), 
+                                             this.pos.x + size * Math.cos(((i + 1) % this.totalPoints) * this.angle),
+                                             this.pos.y + size * Math.sin(((i + 1) % this.totalPoints) * this.angle),));
+            }
         }
 
         show() {
@@ -104,14 +159,14 @@ function sketch(p5) {
             this.pos = p5.createVector(800 / 2, 600 / 2);
             this.rays = [];
 
-            for (let degree = 0; degree < 360; degree += 10) {
+            for (let degree = 0; degree < 360; degree += 1.5) {
                 this.rays.push(new Ray(this.pos, p5.radians(degree)));
             }
         }
 
         show() {
             p5.fill(255);
-            p5.ellipse(this.pos.x, this.pos.y, 12);
+            p5.ellipse(this.pos.x, this.pos.y, 5);
         }
 
         contacts(walls) {
@@ -147,24 +202,51 @@ function sketch(p5) {
     }
 
     // local variables
-    let obstacle;
-    let obstacle2;
+    let leftWall;
+    let rightWall;
+    let topWall;
+    let bottomWall;
     let allBounds = [];
     let particle;
     let square;
+    let rectangle;
+    let triangle;
+    let circle;
 
     // set up things in the environment
     p5.setup = () => {
         p5.createCanvas(800, 600);
 
-       obstacle = new Boundary(750, 100, 750, 500);
-
-       obstacle2 = new Boundary(500, 100, 500, 500);
+       leftWall = new Boundary(0, 0, 0, 600);
+       rightWall = new Boundary(800, 0, 800, 600);
+       topWall = new Boundary(0, 0, 800, 0);
+       bottomWall = new Boundary(0, 600, 800, 600);
        
-       allBounds.push(obstacle);
-       allBounds.push(obstacle2);
+       allBounds.push(leftWall);
+       allBounds.push(rightWall);
+       allBounds.push(topWall);
+       allBounds.push(bottomWall);
 
-       square = new Square(300, 400, 50);
+       square = new Square(300, 400, 100);
+       rectangle = new Rectangle(600, 125, 65);
+       triangle = new Triangle(150, 250, 100);
+       circle = new Circle(600, 400, 55, 100);
+
+       for (let side of square.walls) {
+        allBounds.push(side);
+       }
+
+       for (let side of rectangle.walls) {
+        allBounds.push(side);
+       }
+
+        for (let side of triangle.walls) {
+            allBounds.push(side);
+        }
+
+        for (let side of circle.walls) {
+            allBounds.push(side);
+        }
 
        particle = new Particle();
     }
@@ -174,19 +256,20 @@ function sketch(p5) {
         p5.background(0);
         p5.stroke(255);
 
-        obstacle.show();
+        leftWall.show();
+        rightWall.show();
+        topWall.show();
+        bottomWall.show();
 
-        obstacle2.show();
-
-        // square.show();
+        square.show();
+        rectangle.show();
+        triangle.show();
+        circle.show();
 
 
         particle.update(p5.mouseX, p5.mouseY);
         particle.show();
         particle.contacts(allBounds);
-
-        // particle.contacts(obstacle);
-        // particle.contacts(obstacle2);
 
     };
 }
