@@ -159,7 +159,7 @@ function sketch(p5) {
             this.pos = p5.createVector(800 / 2, 600 / 2);
             this.rays = [];
 
-            for (let degree = 0; degree < 360; degree += 1.5) {
+            for (let degree = 0; degree < 360; degree += 1) {
                 this.rays.push(new Ray(this.pos, p5.radians(degree)));
             }
         }
