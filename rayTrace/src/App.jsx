@@ -1,6 +1,7 @@
 import { useEffect, useRef} from 'react';
 import * as twgl from 'twgl.js';
 import Raycast from './2D Ray Casting/raycast.jsx';
+import Webgl2D from './2D webgl shading/webgl2D.jsx';
 import './App.css';
 
 const shaders = {
@@ -67,8 +68,6 @@ const CanvasComponentTriangle = () => {
       console.log('Browser does not support WebGL'); 
 
     }
-
-    console.log("Everythig is functioning optimally");
 
     gl.clearColor(0, 0, 0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -149,12 +148,14 @@ function App() {
 
       <Raycast />
 
-      {/* <button onClick={() => handleRenderButtonClick('triangle')}>Render Triangle</button> */}
 
       <p>
         Here is we have a point giving rays in all directions and follows the users cursor.
         <br /> when a ray contacts a wall it no longer draws further than the contact point.
       </p>
+
+      <Webgl2D />
+
     </>
   )
 }
