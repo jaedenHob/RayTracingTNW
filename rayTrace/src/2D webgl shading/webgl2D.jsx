@@ -27,6 +27,27 @@ const shaders = {
     }`
 };
 
+const lightProgramInfo = {
+    vs: `#version 300 es
+    precision mediump float;
+
+    in vec3 position;
+
+    uniform mat4 viewMatrix; // Constants that must be set before the render call.
+    uniform mat4 projectionMatrix;
+    uniform mat4 modelMatrix;
+
+    void main () {
+      gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position,1);
+    }`,
+    fs: `#version 300 es
+    precision mediump float;
+    out vec4 outColor;
+    void main () {
+      outColor = vec4(0,0,0,1);
+    }`,
+}
+
 const Webgl2D = () => {
     useEffect(() => {
         const canvas = document.getElementById('myCanvas2');
@@ -42,7 +63,7 @@ const Webgl2D = () => {
 
         }
 
-        gl.clearColor(0, 0, 0, 1.0);
+        gl.clearColor(0.5, 0.5, 0.5, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -58,8 +79,8 @@ const Webgl2D = () => {
 
         // all triangles to be drawn
         const triangles = [
-            [-1, 1, -1, 0, 1, 1], // top half square
-            [1, 0, -1, 0, 1, 1] // bottom half of square
+            [-1, 1, -1, 0, 0, 1], // top half square
+            [0, 0, -1, 0, 0, 1] // bottom half of square
         ];
 
         const vertexAttributes = [];
@@ -69,7 +90,7 @@ const Webgl2D = () => {
             // triangles[triangle]
             vertexAttributes[triangleNum] = {
                 position: { numComponents: 2, data: triangles[triangleNum] },
-                color: { numComponents: 3, data: [1, 0, 0, 0, 1, 0, 0, 0, 1] }
+                color: { numComponents: 3, data: [, 0, 0, 0, 0, 0, 0, 0, 0] }
             };
         }
 
