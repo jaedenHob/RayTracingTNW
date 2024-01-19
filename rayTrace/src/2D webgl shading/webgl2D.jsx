@@ -45,32 +45,48 @@ const Webgl2D = () => {
         gl.clearColor(0, 0, 0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
+        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
         const programInfo = twgl.createProgramInfo(gl, [shaders.vs, shaders.fs], (message) => {
             console.log("Program shader copilation error\n" + message);
         });
-
-        // drawing a square by making points for two triangles
-        const vertex = [
-            -1, 1, -1, 0, 1, 1
-        ];
-        const vertexAttributes = {
-            position: { numComponents: 2, data: vertex },
-            color: { numComponents: 3, data: [1, 0, 0, 0, 1, 0, 0, 0, 1] }
-        };
 
         const uniforms = {
             aspect,
             scale
         };
 
-        const bufferInfo = twgl.createBufferInfoFromArrays(gl, vertexAttributes);
+        // all triangles to be drawn
+        const triangles = [
+            [-1, 1, -1, 0, 1, 1], // top half square
+            [1, 0, -1, 0, 1, 1] // bottom half of square
+        ];
 
-        gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+        const vertexAttributes = [];
+
+        // create vertex attibutes
+        for (let triangleNum in triangles) {
+            // triangles[triangle]
+            vertexAttributes[triangleNum] = {
+                position: { numComponents: 2, data: triangles[triangleNum] },
+                color: { numComponents: 3, data: [1, 0, 0, 0, 1, 0, 0, 0, 1] }
+            };
+        }
+
+        const bufferInfo = [];
+
+        for (let i in triangles) {
+            bufferInfo[i] = twgl.createBufferInfoFromArrays(gl, vertexAttributes[i]);
+        }
+        
         gl.useProgram(programInfo.program);
-
-        twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo);
         twgl.setUniforms(programInfo, uniforms);
-        twgl.drawBufferInfo(gl, bufferInfo);
+
+        for (let i in triangles) {
+            twgl.setBuffersAndAttributes(gl, programInfo, bufferInfo[i]);
+            twgl.drawBufferInfo(gl, bufferInfo[i]);
+        }
+
 
     }, [])
 
