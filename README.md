@@ -10,7 +10,19 @@ this in a 2D space because of the smaller complexity before my attempt towards a
 
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/b9b51e80-dd11-4353-a8b2-f737545cb341)
 
+![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/9849bfe1-df6a-4f9d-89d1-efd1c8b80f19)
+
+Things I have experimented with in a 2D space was casting out rays as well as math for calculating the
+soft shadows from multiple light sources.
+
+![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/8728e2ad-8a67-4b29-bf5d-c44b5c14604d)
+
+Above is the raytracer itself (In progress).
+
 
 ## to install just copy the repo then install the dependencies:
 
 `npm install`
+then
+`npm run dev`
+when within the application directory.
