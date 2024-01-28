@@ -1,7 +1,5 @@
 import React from 'react';
 import { useEffect, useRef } from 'react';
-import * as twgl from 'twgl.js';
-
 
 
 const shaders = {
@@ -51,7 +49,6 @@ const lightProgramInfo = {
 const Webgl2D = () => {
     useEffect(() => {
         // Quick vertex shader to draw a light with.
-        // Just use a sprite in a real project, it makes the shape/gradient more flexible.
         const LIGHT_VSHADER = (`
   attribute vec2 a_vertex;
   attribute vec2 a_uv;
@@ -68,21 +65,18 @@ const Webgl2D = () => {
 `);
 
         // Quick fragment shader to draw a light with.
-        // Just use a sprite in a real project, it makes the shape/gradient more flexible.
         const LIGHT_FSHADER = (`
   varying lowp vec2 v_uv;
   
   uniform lowp vec3 u_color;
   
   void main(){
-    // A nice radial gradient with quadratic falloff.
     lowp float brightness = max(0.0, 1.0 - pow(dot(v_uv, v_uv), 0.25));
     gl_FragColor = vec4(brightness*u_color, 1.0);
   }
 `);
 
         // Quick vertex buffer to draw a light with.
-        // Just use a sprite in a real project, it makes the shape/gradient more flexible.
         const LIGHT_SPRITE_VERTS = new Float32Array([
             10, 10, 10, 10,
             -10, 10, -10, 10,
@@ -102,7 +96,6 @@ const Webgl2D = () => {
   varying vec3 v_proj_pos;
   varying vec4 v_endpoints;
   
-  // Keep in mind this is GLSL code. You'll need to swap row/column for HLSL.
   mat2 adjugate(mat2 m){return mat2(m[1][1], -m[0][1], -m[1][0], m[0][0]);}
   
   void main(){
@@ -184,18 +177,6 @@ const Webgl2D = () => {
                 return;
             }
 
-            // Vertex format is {{a.x, a.y}, {b.x, b.y}, {s.x, s.y}} where:
-            // 'a' is the first endpoint of a shadow casting segment.
-            // 'b' is the seconnd endpoint
-            // 's' is the shadow coordinate, and selects which corner
-            // of the shadow quad this vertex corresponds to.
-            // This makes for a fair amount of redundant vertex data.
-            // Instancing will simplify packing the shadow data, but might be slower.
-
-            // NOTE: I'm using non-indexed geometry here to avoid adding index
-            // buffer code to an otherwise fairly minimal code example.
-            // This is NOT at all ideal, and you should really prefer
-            // indexed triangles or instancing in your own code.
             const shadow_verts = new Float32Array([
                 -0.2, -0.1, 0.2, -0.1, 0.0, 0.0, // Vertex A
                 -0.2, -0.1, 0.2, -0.1, 0.0, 1.0, // Vertex B
@@ -231,22 +212,18 @@ const Webgl2D = () => {
             // This blend mode applies the shadow to the light, accumulates it, and resets the alpha.
             // The source color is multiplied by the destination alpha (where the shadow mask has been drawn).
             // The alpha src alpha replaces the destination alpha.
-            // For the accumulate/clear trick to work your light must be opaque,
-            // and cover the the whole drawable area (framebuffer or scissor rectangle)
-            // TODO HDR clamp version
             const blend_light = {
                 equation: { color: gl.FUNC_ADD, alpha: gl.FUNC_ADD },
                 function: { color_src: gl.DST_ALPHA, color_dst: gl.ONE, alpha_src: gl.ONE, alpha_dst: gl.ZERO },
             };
 
             // Shadows should only be drawn into the alpha channel and should leave color untouched.
-            // Unlike hard shadows that just black out the alpha, soft shadows are subtracted.
             const blend_shadow = {
                 equation: { color: gl.FUNC_ADD, alpha: gl.FUNC_REVERSE_SUBTRACT },
                 function: { color_src: gl.ZERO, color_dst: gl.ONE, alpha_src: gl.ONE, alpha_dst: gl.ONE },
             };
 
-            // Bundle up all of rendering data we need...
+            // all rendering data
             const ctx = {
                 gl: gl,
                 light_material: {
@@ -281,7 +258,6 @@ const Webgl2D = () => {
         function draw(ctx, time) {
             const gl = ctx.gl;
 
-            // Make sure to clear the alpha to 1.0 otherwise your first light won't show up!
             gl.clearColor(0.0, 0.0, 0.0, 1.0);
             gl.clear(gl.COLOR_BUFFER_BIT);
 
@@ -299,16 +275,12 @@ const Webgl2D = () => {
                 const light = lights[i];
 
                 // Draw the shadow mask into destination alpha.
-                // You can skip the transform part if you batch the geometry or something.
-                // However, the shadow shader does need the light's position to know where to project from.
                 bind_material(gl, ctx.shadow_material, [
                     { name: "u_matrix", type: UNIFORM.mat4, value: rectangle},
                     { name: "u_light", type: UNIFORM.vec3, value: [light.x, light.y, light.radius] }
                 ]);
                 gl.drawArrays(gl.TRIANGLES, 0, SHADOW_VERTEX_COUNT);
 
-                // This is my quick and dirty way of drawing a sprite for the lights.
-                // Other than the blending mode, the implementation here is unimportant.
                 bind_material(gl, ctx.light_material, [
                     { name: "u_color", type: UNIFORM.vec3, value: light.color },
                     { name: "u_matrix", type: UNIFORM.mat4, value: mat4_trs(light.x, light.y, 0, light.size) },

@@ -2,6 +2,7 @@ import { useEffect, useRef} from 'react';
 import * as twgl from 'twgl.js';
 import Raycast from './2D Ray Casting/raycast.jsx';
 import Webgl2D from './2D webgl shading/webgl2D.jsx';
+import Raytrace from './Ray Tracer/webglTracer.jsx';
 import './App.css';
 
 const shaders = {
@@ -27,32 +28,6 @@ const shaders = {
     }`
 };
 
-const animateShaders = {
-  vs: `#version 300 es
-    in vec2 position;
-    in vec3 color;
-
-    uniform float aspect;
-    uniform float scale;
-    uniform vec2 translation;
-
-    out vec3 fragColor;
-    void main () {
-
-      vec2 translatedPosition = position + translation;
-
-      gl_Position = vec4(scale * translatedPosition / vec2(aspect,1), 0, 1);
-      fragColor = color;
-    }`,
-
-  fs: `#version 300 es
-    precision mediump float;
-    out vec4 outColor;
-    in vec3 fragColor;
-    void main () {
-      outColor = vec4(fragColor, 1);
-    }`
-};
 
 const CanvasComponentTriangle = () => {
   useEffect(() => {
@@ -157,13 +132,21 @@ function App() {
 
         <br />
 
+        <Webgl2D /> 
+
         <p>
-          Here is we have a point giving rays in all directions and follows the users cursor.
-          when a ray contacts a wall it no longer draws further than the contact point.
+          Something that pained me was how in previous projects where I have made a shadow protrude from an object useing shadow mapping.
+          Shadows appeared, but where hard shadows that appeared blocky so in a 2D situation I was doing a little research into soft shadows.
+          This way is a little more complicated and involved calculations for the three parts of a shodow. The umbra, penumbra, and antumbra. 
+          For my implementation I may go for try to use RNG to mix/blend the background color with the shadow color to make this affect. 
         </p>
 
-        <Webgl2D />
+        <br />
+
+        <Raytrace />
+        
       </div>
+
 
     </>
   )
