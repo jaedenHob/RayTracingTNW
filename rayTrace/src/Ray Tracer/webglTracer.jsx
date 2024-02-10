@@ -1,6 +1,8 @@
 import React, { useEffect } from 'react';
 import * as twgl from 'twgl.js';
 
+
+// supporting functions and variables for putting rays out into a scene
 function deg2rad(degrees) {
     return degrees * Math.PI / 180;
 }
@@ -29,15 +31,40 @@ const viewport_width = viewport_height * (image_width / image_height);
 console.log(image_height);
 
 const pixelCode = [
+    
+    // uniforms
+    `
+    uniform vec3 Background;
+    `,
 
-    `vec3 pixelColor(vec2 pixel) {
-        vec3 color = vec3(0.0);
+    `
+    // defining a ray
+    struct Ray {
+        vec3 origin;
+        vec3 direction;
+    };`,
 
-        return color;
-        // Ray ray = getRay(pixel); 
+    `
+    // defining the specific point on a ray
+    vec3 pointOnRay(in Ray ray, float t) {
+        return (ray.origin + t * ray.direction);
+    }`,
 
-        // return Background;
-    }`
+    // `vec3 pixelColor(vec2 pixel) {
+    //     vec3 color = Background;
+
+    //     return Background;
+    // }`
+
+    `
+    vec3 pixelColor(vec2 pixel) {
+        vec3 color = Background;
+
+        // Ray ray = getRay(pixel);
+
+        return Background;
+    }
+`
 ]
 
 const Raytrace = () => {
@@ -73,9 +100,8 @@ const Raytrace = () => {
 
                     ${pixelCode.join("\n//----------------")} // interjected code
 
-                    void main () {
-                    // fragColor = vec4(pixelColor(gl_FragCoord.xy), 1.0);
-                        fragColor = vec4(0, 0, 0, 1);
+                    void main() {
+                        fragColor = vec4(pixelColor(gl_FragCoord.xy), 1.0);
                     }`
         };
 
@@ -116,7 +142,7 @@ const Raytrace = () => {
 
         const uniforms = {
             asp: gl.canvas.width / gl.canvas.height,
-            Background: [0, 0, 0],
+            Background: [0.8, 0.5, 0.0],
             resolution: [gl.canvas.width, gl.canvas.height],
             scale: 1,
             uModel: modelMatrix,
