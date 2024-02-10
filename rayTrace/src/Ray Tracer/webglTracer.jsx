@@ -5,6 +5,41 @@ function deg2rad(degrees) {
     return degrees * Math.PI / 180;
 }
 
+function hex2rgb(hex) {
+    hex = hex.replace('#', '');
+    return hex.match(new RegExp('(.{' + hex.length / 3 + '})', 'g'))
+        .map(l => parseInt(hex.length % 2 ? l + l : l, 16) / 255);
+}
+
+
+// rendered image setup
+const aspect_ratio = 16.0 / 9.0;
+const image_width = 800;
+
+// calculate image height that is at least 1
+var image_height = image_width / aspect_ratio;
+
+if (image_height < 1) 
+    image_height = 1;
+
+// viewport width can be less than 1
+const viewport_height = 2.0;
+const viewport_width = viewport_height * (image_width / image_height);
+
+console.log(image_height);
+
+const pixelCode = [
+
+    `vec3 pixelColor(vec2 pixel) {
+        vec3 color = vec3(0.0);
+
+        return color;
+        // Ray ray = getRay(pixel); 
+
+        // return Background;
+    }`
+]
+
 const Raytrace = () => {
     useEffect(() => {
         const m4 = twgl.m4;
@@ -17,64 +52,31 @@ const Raytrace = () => {
             console.log('Browser does not support WebGL');
         }
 
-        gl.clearColor(0.5, 0.5, 0.5, 1.0);
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
         const shaders = {
             vs: `#version 300 es
-                precision mediump float;
-                in vec3 position;
-                uniform float scale;
-                uniform float asp;
-                uniform mat4 uModel;
-                uniform mat4 uView;
-                uniform mat4 uProjection;
-                out vec3 fragColor;
-                out vec3 cent;
-                void main(){
-                    vec4 cubeCenter = vec4(0,0,0,1);
-                    cent = vec3(uView * uModel * cubeCenter);
-                    gl_Position = uProjection * uView * uModel * vec4(position, 1.0f);
-                }`,
+                    precision highp float;
+
+                    in vec4 position;
+                    
+                    void main () {
+                    gl_Position = position;
+                    }`,
+
             fs: `#version 300 es
-                precision mediump float;
-                in vec3 fragColor;
-                in vec3 cent;
-                uniform float canvasHeight;
-                uniform float canvasWidth;
-                uniform float radius;
-                uniform vec3 eyePosition;
-                vec3 orig, dir, N;
-                float A, B, C, x_add, x_sub, tHit;
-                out vec4 outColor;
-                void main(){
-                    orig = vec3(0);
-                    dir = vec3(gl_FragCoord.xy * vec2(1.0 / canvasWidth, 1.0 / canvasHeight), 0) * 2.0 - 1.0;
-                    dir = normalize(dir);
-                    A = length(dir) * length(dir);
-                    B = 2.0 * dot(dir, (orig - cent));
-                    C = length(orig - cent) * length(orig - cent) - radius * radius;
-                    float discriminant = (B * B) - (4.0 * A * C);
-                    if (discriminant < 0.0) {
-                        discard;
-                    } else if (discriminant == 0.0) {
-                        tHit = -B / (2.0 * A);
-                    } else {
-                        x_add = (-B + sqrt(discriminant)) / (2.0 * A);
-                        x_sub = (-B - sqrt(discriminant)) / (2.0 * A);
-                        if (x_add >= 0.0 && x_sub < 0.0) {
-                            tHit = x_add;
-                        } else if (x_add < 0.0 && x_sub >= 0.0) {
-                            tHit = x_sub;
-                        } else {
-                            tHit = (x_add < x_sub) ? x_add : x_sub;
-                        }
-                    }
-                    vec3 P = orig + tHit * dir;
-                    N = P - cent;
-                    N = normalize(N);
-                    outColor = vec4((N + 1.0) * 0.5, 1);
-                }`,
+                    
+                    precision highp float;
+                    
+                    out vec4 fragColor;
+
+                    ${pixelCode.join("\n//----------------")} // interjected code
+
+                    void main () {
+                    // fragColor = vec4(pixelColor(gl_FragCoord.xy), 1.0);
+                        fragColor = vec4(0, 0, 0, 1);
+                    }`
         };
 
         const programInfo = twgl.createProgramInfo(gl, [shaders.vs, shaders.fs]);
@@ -114,6 +116,8 @@ const Raytrace = () => {
 
         const uniforms = {
             asp: gl.canvas.width / gl.canvas.height,
+            Background: [0, 0, 0],
+            resolution: [gl.canvas.width, gl.canvas.height],
             scale: 1,
             uModel: modelMatrix,
             uView: viewMatrix,
@@ -121,7 +125,6 @@ const Raytrace = () => {
             canvasHeight: gl.canvas.height,
             canvasWidth: gl.canvas.width,
             eyePosition: eyeVector,
-            radius: 1.0, // Replace with your desired value
         };
 
         gl.clear(gl.COLOR_BUFFER_BIT);
