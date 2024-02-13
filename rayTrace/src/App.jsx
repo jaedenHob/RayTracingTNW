@@ -100,7 +100,7 @@ function App() {
 
         <h1>Triangle Webgl Render</h1>
 
-        <CanvasComponentTriangle />
+        {/* <CanvasComponentTriangle /> */}
 
         <p>
           I have never used webgl in reactjs before so going full circle I am applying the very
@@ -122,7 +122,7 @@ function App() {
 
         <br />
 
-        <Raycast />
+        {/* <Raycast /> */}
 
 
         <p>
@@ -132,7 +132,7 @@ function App() {
 
         <br />
 
-        <Webgl2D /> 
+        {/* <Webgl2D />  */}
 
         <p>
           Something that pained me was how in previous projects where I have made a shadow protrude from an object useing shadow mapping.

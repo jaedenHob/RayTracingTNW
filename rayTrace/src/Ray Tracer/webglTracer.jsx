@@ -1,7 +1,6 @@
 import React, { useEffect } from 'react';
 import * as twgl from 'twgl.js';
 
-
 // supporting functions and variables for putting rays out into a scene
 function deg2rad(degrees) {
     return degrees * Math.PI / 180;
@@ -21,20 +20,21 @@ const image_width = 800;
 // calculate image height that is at least 1
 var image_height = image_width / aspect_ratio;
 
-if (image_height < 1) 
-    image_height = 1;
-
 // viewport width can be less than 1
 const viewport_height = 2.0;
 const viewport_width = viewport_height * (image_width / image_height);
+const camera_center = [0, 0, 0];
 
-console.log(image_height);
 
 const pixelCode = [
     
     // uniforms
     `
-    uniform vec3 Background;
+    uniform vec3 camera_center;
+    uniform float image_height;
+    uniform float image_width;
+    uniform float viewport_width;
+    uniform float viewport_height;
     `,
 
     `
@@ -50,19 +50,39 @@ const pixelCode = [
         return (ray.origin + t * ray.direction);
     }`,
 
-    // `vec3 pixelColor(vec2 pixel) {
-    //     vec3 color = Background;
+    `// geting a ray
+    Ray getRay(vec2 pixel) {
+        Ray ray;
 
-    //     return Background;
-    // }`
+        float focal_length = 1.0;
+
+        vec3 viewport_u = vec3(viewport_width, 0, 0);
+        vec3 viewport_v = vec3(0, -viewport_height, 0);
+        vec3 pixel_delta_u = viewport_u / image_width;
+        vec3 pixel_delta_v = viewport_v / image_height;
+
+        // Calculate the location of the upper left pixel.
+        vec3 viewport_upper_left = camera_center - vec3(0, 0, focal_length) - viewport_u / 2.0 - viewport_v / 2.0;
+        vec3 pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+
+        vec3 pixelCenter = pixel00_loc + (pixel.x * pixel_delta_u) + (pixel.y * pixel_delta_v);
+        
+        ray.origin = camera_center;
+        ray.direction = pixelCenter - camera_center;
+        return ray;
+    }`,
 
     `
     vec3 pixelColor(vec2 pixel) {
-        vec3 color = Background;
+        // vec3 color = Background;
 
-        // Ray ray = getRay(pixel);
+        Ray ray = getRay(pixel);
 
-        return Background;
+        float a = 0.8 * -normalize(ray.direction).y + 1.0;
+
+        vec3 color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+
+        return color;
     }
 `
 ]
@@ -81,6 +101,7 @@ const Raytrace = () => {
 
         gl.clearColor(0.0, 0.0, 0.0, 1.0);
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        
 
         const shaders = {
             vs: `#version 300 es
@@ -141,16 +162,16 @@ const Raytrace = () => {
         const modelMatrix = m4.identity();
 
         const uniforms = {
-            asp: gl.canvas.width / gl.canvas.height,
-            Background: [0.8, 0.5, 0.0],
-            resolution: [gl.canvas.width, gl.canvas.height],
-            scale: 1,
-            uModel: modelMatrix,
-            uView: viewMatrix,
-            uProjection: projectionMatrix,
-            canvasHeight: gl.canvas.height,
-            canvasWidth: gl.canvas.width,
-            eyePosition: eyeVector,
+            // Background: [0.0, 0.0, 0.0],
+            // resolution: [gl.canvas.width, gl.canvas.height],
+            // fov: deg2rad(30),
+            // pixel00: pixel00_location,
+            camera_center: camera_center,
+            image_height: image_height,
+            image_width: image_width,
+            viewport_height: viewport_height,
+            viewport_width: viewport_width,
+            
         };
 
         gl.clear(gl.COLOR_BUFFER_BIT);
@@ -163,7 +184,7 @@ const Raytrace = () => {
     return (
         <>
             <div>
-                <canvas id="myCanvas3" width="800" height="600"></canvas>
+                <canvas id="myCanvas3" width="800" height="450"></canvas>
             </div>
         </>
     );
