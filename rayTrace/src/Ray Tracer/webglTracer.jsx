@@ -50,8 +50,22 @@ const pixelCode = [
         vec3 p;
         vec3 normal;
         float t;
-        bool front_face;
+        bool frontFace;
     };`,
+
+    `
+    // defining if the ray is hitting the inside or outside and makeing the normal point accordingly
+    void setFaceNormal(Ray ray, vec3 outwardNormal, hitRecord rec) {
+
+        if (dot(ray.direction, outwardNormal) < 0.0)
+            rec.frontFace = true;
+        else
+            rec.frontFace = false;
+
+        rec.normal = rec.frontFace ? outwardNormal : -outwardNormal;
+
+        return;
+    }`,
 
     `
     // defining a sphere
@@ -62,7 +76,7 @@ const pixelCode = [
 
     `
     // defining the specific point on a ray
-    vec3 pointOnRay(in Ray ray, float t) {
+    vec3 pointOnRay(Ray ray, float t) {
         return (ray.origin + t * ray.direction);
     }`,
 
@@ -94,6 +108,9 @@ const pixelCode = [
         rec.t = root;
         rec.p = pointOnRay(ray, root);
         rec.normal = (rec.p - ball.center) / ball.radius;
+
+        vec3 outward_normal = (rec.p - ball.center) / ball.radius;
+        setFaceNormal(ray, outward_normal, rec);
 
         return true;
     }`,
