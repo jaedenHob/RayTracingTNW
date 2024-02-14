@@ -50,7 +50,7 @@ const pixelCode = [
         return (ray.origin + t * ray.direction);
     }`,
 
-    `// geting a ray
+    `// geting a ray (mainly finding the direction between the camera and viewport)
     Ray getRay(vec2 pixel) {
         Ray ray;
 
@@ -72,19 +72,48 @@ const pixelCode = [
         return ray;
     }`,
 
+    // bool hit_sphere(const point3& center, double radius, const ray& r) {
+    // vec3 oc = r.origin() - center;
+    // auto a = dot(r.direction(), r.direction());
+    // auto b = 2.0 * dot(oc, r.direction());
+    // auto c = dot(oc, oc) - radius * radius;
+    // auto discriminant = b * b - 4 * a * c;
+    // return (discriminant >= 0);
+    // }
+
+    `
+    bool hitSphere(vec3 spherePos, float radius, Ray ray) {
+        vec3 oc = ray.origin - spherePos;
+
+        float a = dot(ray.direction, ray.direction);
+        float b = 2.0 * dot(oc, ray.direction);
+        float c = dot(oc, oc) - radius * radius;
+        float discriminant = b * b - 4.0 * a * c;
+
+        bool hasHit = (discriminant > 0.0);
+
+        if (hasHit)
+            return true;
+        else
+            return false;
+    }`,
+
     `
     vec3 pixelColor(vec2 pixel) {
         // vec3 color = Background;
 
         Ray ray = getRay(pixel);
 
+        // logic for creating background blue -> white gradient
         float a = 0.8 * -normalize(ray.direction).y + 1.0;
-
         vec3 color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
 
+        if (hitSphere(vec3 (0.0, 0.0, -1.0), 0.5, ray)) {
+            return vec3(0.9, 0.5, 0.0);
+        }
+
         return color;
-    }
-`
+    }`
 ]
 
 const Raytrace = () => {
@@ -148,24 +177,7 @@ const Raytrace = () => {
 
         const bufferInfo = twgl.createBufferInfoFromArrays(gl, vertexAttributes);
 
-        // camera stuff
-        const eyeDirection = m4.transformDirection(
-            m4.multiply(m4.rotationY(deg2rad(0)), m4.rotationX(deg2rad(0))),
-            [0, 0, 1]
-        );
-
-        const eyeVector = v3.mulScalar(eyeDirection, 3)
-
-        const cameraMatrix = m4.lookAt(eyeVector, [0, 0, 0], [0, 1, 0]);
-        const viewMatrix = m4.inverse(cameraMatrix);
-        const projectionMatrix = m4.perspective(deg2rad(75), gl.canvas.width / gl.canvas.height, 1, 2000);
-        const modelMatrix = m4.identity();
-
         const uniforms = {
-            // Background: [0.0, 0.0, 0.0],
-            // resolution: [gl.canvas.width, gl.canvas.height],
-            // fov: deg2rad(30),
-            // pixel00: pixel00_location,
             camera_center: camera_center,
             image_height: image_height,
             image_width: image_width,
