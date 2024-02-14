@@ -45,9 +45,57 @@ const pixelCode = [
     };`,
 
     `
+    // defining all things that count as a hit
+    struct hitRecord {
+        vec3 p;
+        vec3 normal;
+        float t;
+        bool front_face;
+    };`,
+
+    `
+    // defining a sphere
+    struct Sphere {
+        vec3 center;
+        float radius;
+    };`,
+
+    `
     // defining the specific point on a ray
     vec3 pointOnRay(in Ray ray, float t) {
         return (ray.origin + t * ray.direction);
+    }`,
+
+    `
+    // defining a hit specific to spheres and the possible amount of roots based from the discriminant
+    bool hit_sphere(Ray ray, float ray_tmin, float ray_tmax, Sphere ball, hitRecord rec) {
+        vec3 oc = ray.origin - ball.center;
+
+        float a = dot(ray.direction, ray.direction);
+        float half_b = dot(oc, ray.direction);
+        float c = dot(oc, oc) - ball.radius * ball.radius;
+        float discriminant = half_b * half_b - a * c;
+
+        if (discriminant < 0.0)
+            return false;
+
+        float sqrtd = sqrt(discriminant);
+
+        // find the nearest root that lies within the acceptable range
+        float root = (-half_b - sqrtd) / a;
+
+        if (root <= ray_tmin || ray_tmax <= root) {
+            root = (-half_b + sqrtd) / a;
+
+            if (root <= ray_tmin || ray_tmax <= root)
+                return false;
+        }
+
+        rec.t = root;
+        rec.p = pointOnRay(ray, root);
+        rec.normal = (rec.p - ball.center) / ball.radius;
+
+        return true;
     }`,
 
     `// geting a ray (mainly finding the direction between the camera and viewport)
