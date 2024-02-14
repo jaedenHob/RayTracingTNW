@@ -78,14 +78,14 @@ const pixelCode = [
         vec3 oc = ray.origin - spherePos;
 
         float a = dot(ray.direction, ray.direction);
-        float b = 2.0 * dot(oc, ray.direction);
+        float half_b = dot(oc, ray.direction);
         float c = dot(oc, oc) - radius * radius;
-        float discriminant = b * b - 4.0 * a * c;
+        float discriminant = half_b * half_b - a * c;
 
         if (discriminant < 0.0)
             return -1.0;
         else
-            return (-b - sqrt(discriminant) ) / (2.0 * a);
+            return (-half_b - sqrt(discriminant) ) / (a);
     }`,
 
     `
