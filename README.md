@@ -15,14 +15,9 @@ this in a 2D space because of the smaller complexity before my attempt towards a
 Things I have experimented with in a 2D space was casting out rays as well as math for calculating the
 soft shadows from multiple light sources.
 
-![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/9cba768c-5094-425f-ad75-6924b6e3b06d)
-
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/c38d3a64-af43-4c1c-bddf-164cf570449f)
 
-
-
 Above is the raytracer itself (In progress).
-
 
 ## to install just copy the repo then install the dependencies:
 
