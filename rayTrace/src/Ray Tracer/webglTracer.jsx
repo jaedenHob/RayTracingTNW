@@ -38,6 +38,12 @@ const pixelCode = [
     `,
 
     `
+    // constants
+    #define PI 3.1415926538;
+    #define INFINITY 1.0 / 0.00000000001;
+    `,
+
+    `
     // defining a ray
     struct Ray {
         vec3 origin;
