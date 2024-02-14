@@ -17,7 +17,8 @@ soft shadows from multiple light sources.
 
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/9cba768c-5094-425f-ad75-6924b6e3b06d)
 
-![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/e389f9fb-cd34-4da9-904b-0899e15757d7)
+![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/c38d3a64-af43-4c1c-bddf-164cf570449f)
+
 
 
 Above is the raytracer itself (In progress).
