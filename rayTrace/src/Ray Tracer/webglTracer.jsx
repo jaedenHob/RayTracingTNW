@@ -90,9 +90,7 @@ const pixelCode = [
         float c = dot(oc, oc) - radius * radius;
         float discriminant = b * b - 4.0 * a * c;
 
-        bool hasHit = (discriminant > 0.0);
-
-        if (hasHit)
+        if (discriminant > 0.0)
             return true;
         else
             return false;
