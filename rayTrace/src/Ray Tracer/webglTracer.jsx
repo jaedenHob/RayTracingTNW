@@ -57,7 +57,7 @@ const pixelCode = [
         float focal_length = 1.0;
 
         vec3 viewport_u = vec3(viewport_width, 0, 0);
-        vec3 viewport_v = vec3(0, -viewport_height, 0);
+        vec3 viewport_v = vec3(0, viewport_height, 0);
         vec3 pixel_delta_u = viewport_u / image_width;
         vec3 pixel_delta_v = viewport_v / image_height;
 
@@ -72,17 +72,9 @@ const pixelCode = [
         return ray;
     }`,
 
-    // bool hit_sphere(const point3& center, double radius, const ray& r) {
-    // vec3 oc = r.origin() - center;
-    // auto a = dot(r.direction(), r.direction());
-    // auto b = 2.0 * dot(oc, r.direction());
-    // auto c = dot(oc, oc) - radius * radius;
-    // auto discriminant = b * b - 4 * a * c;
-    // return (discriminant >= 0);
-    // }
-
     `
-    bool hitSphere(vec3 spherePos, float radius, Ray ray) {
+    // calculates if a ray hits a sphere and the normals
+    float hitSphere(vec3 spherePos, float radius, Ray ray) {
         vec3 oc = ray.origin - spherePos;
 
         float a = dot(ray.direction, ray.direction);
@@ -90,25 +82,31 @@ const pixelCode = [
         float c = dot(oc, oc) - radius * radius;
         float discriminant = b * b - 4.0 * a * c;
 
-        if (discriminant > 0.0)
-            return true;
+        if (discriminant < 0.0)
+            return -1.0;
         else
-            return false;
+            return (-b - sqrt(discriminant) ) / (2.0 * a);
     }`,
 
     `
     vec3 pixelColor(vec2 pixel) {
-        // vec3 color = Background;
+        vec3 color = vec3(0., 0., 0.);
 
+        // we are creating a ray instance for every pixel
         Ray ray = getRay(pixel);
 
-        // logic for creating background blue -> white gradient
-        float a = 0.8 * -normalize(ray.direction).y + 1.0;
-        vec3 color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+        // creating a sphere and its normals (t is a point on the ray {P(t) = A + tb})
+        float t = hitSphere(vec3 (0.0, 0.0, -1.0), 0.5, ray);
 
-        if (hitSphere(vec3 (0.0, 0.0, -1.0), 0.5, ray)) {
-            return vec3(0.9, 0.5, 0.0);
+        if (t > 0.0) {
+            vec3 N = normalize(pointOnRay(ray, t) - vec3(0.0, 0.0, -1.0));
+            return 0.5 * vec3(N.x + 1.0, N.y + 1.0, N.z + 1.0);
         }
+
+        // logic for creating background blue -> white gradient
+        vec3 unitDirection = normalize(ray.direction);
+        float a = 0.5 * (unitDirection.y + 1.0);
+        color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
 
         return color;
     }`
