@@ -50,6 +50,11 @@ const pixelCode = [
         return degrees * PI / 180.0;
     }`,
 
+    `// check if t for a ray is within acceptable range
+    bool surrounds(float x, float min, float max) {
+        return min < x && x < max;
+    }`,
+
     `
     // defining a ray
     struct Ray {
@@ -64,6 +69,12 @@ const pixelCode = [
         vec3 normal;
         float t;
         bool frontFace;
+    };`,
+
+    `// defining interval which is the minimum and maximum value of t
+    struct interval {
+        float max;
+        float min;
     };`,
 
     `
@@ -108,10 +119,10 @@ const pixelCode = [
         // find the nearest root that lies within the acceptable range
         float root = (-half_b - sqrtd) / a;
 
-        if (root <= ray_tmin || ray_tmax <= root) {
+        if (!surrounds(root, ray_tmin, ray_tmax)) {
             root = (-half_b + sqrtd) / a;
 
-            if (root <= ray_tmin || ray_tmax <= root)
+            if (!surrounds(root, ray_tmin, ray_tmax))
                 return false;
         }
 
@@ -126,15 +137,15 @@ const pixelCode = [
 
     `
     // hitList for keeping tracks
-    bool hitList(Sphere[MAX_SPHERE] spheres, Ray ray, float tMin, float tMax, out hitRecord hit) {
+    bool hitList(Sphere[MAX_SPHERE] spheres, Ray ray, interval rayT, out hitRecord hit) {
         hitRecord temp;
         bool hitAnything = false;
-        float closest = tMax;
+        float closest = rayT.max;
 
         // loop through each sphere
         for (int i = 0; i < MAX_SPHERE; i++) {
 
-            if(hit_sphere(spheres[i], ray, tMin, closest, temp)) {
+            if(hit_sphere(spheres[i], ray, rayT.min, closest, temp)) {
                 hitAnything = true;
                 closest = temp.t;
                 hit = temp;
@@ -169,14 +180,12 @@ const pixelCode = [
     vec3 pixelColor(vec2 pixel, Sphere[MAX_SPHERE] orb) {
         hitRecord rec;
 
-        // rec.normal = vec3(1.0, 0.5, 0.0); // normal is affected
-
         vec3 color = vec3(0., 0., 0.);
 
         // we are creating a ray instance for every pixel
         Ray ray = getRay(pixel);
 
-        if (hitList(orb, ray, 0.0, INFINITY, rec)) {
+        if (hitList(orb, ray, interval(INFINITY, 0.0), rec)) {
             color = 0.5 * (rec.normal + vec3(1.0, 1.0, 1.0));
             return color; 
         }
