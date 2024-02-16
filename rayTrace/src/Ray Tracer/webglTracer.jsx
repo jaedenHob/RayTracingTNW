@@ -27,7 +27,7 @@ const camera_center = [0, 0, 0];
 
 
 const pixelCode = [
-    
+
     // uniforms
     `
     uniform vec3 camera_center;
@@ -39,9 +39,16 @@ const pixelCode = [
 
     `
     // constants
-    #define PI 3.1415926538;
-    #define INFINITY 1.0 / 0.00000000001;
+    #define PI 3.1415926538
+    #define INFINITY 1.0 / 0.00000000001
+    #define MAX_SPHERE 2
     `,
+
+    // utility functions
+    `// from degrees to radians
+    float degrees_to_radians(float degrees) {
+        return degrees * PI / 180.0;
+    }`,
 
     `
     // defining a ray
@@ -61,12 +68,9 @@ const pixelCode = [
 
     `
     // defining if the ray is hitting the inside or outside and makeing the normal point accordingly
-    void setFaceNormal(Ray ray, vec3 outwardNormal, hitRecord rec) {
+    void setFaceNormal(Ray ray, vec3 outwardNormal, out hitRecord rec) {
 
-        if (dot(ray.direction, outwardNormal) < 0.0)
-            rec.frontFace = true;
-        else
-            rec.frontFace = false;
+        rec.frontFace = dot(ray.direction, outwardNormal) < 0.0;
 
         rec.normal = rec.frontFace ? outwardNormal : -outwardNormal;
 
@@ -88,7 +92,7 @@ const pixelCode = [
 
     `
     // defining a hit specific to spheres and the possible amount of roots based from the discriminant
-    bool hit_sphere(Ray ray, float ray_tmin, float ray_tmax, Sphere ball, hitRecord rec) {
+    bool hit_sphere(Sphere ball, Ray ray, float ray_tmin, float ray_tmax, out hitRecord rec) {
         vec3 oc = ray.origin - ball.center;
 
         float a = dot(ray.direction, ray.direction);
@@ -113,13 +117,31 @@ const pixelCode = [
 
         rec.t = root;
         rec.p = pointOnRay(ray, root);
-        rec.normal = (rec.p - ball.center) / ball.radius;
-
         vec3 outward_normal = (rec.p - ball.center) / ball.radius;
+
         setFaceNormal(ray, outward_normal, rec);
 
         return true;
     }`,
+
+    `
+    // hitList for keeping tracks
+    bool hitList(Sphere[MAX_SPHERE] spheres, Ray ray, float tMin, float tMax, out hitRecord hit) {
+        hitRecord temp;
+        bool hitAnything = false;
+        float closest = tMax;
+
+        // loop through each sphere
+        for (int i = 0; i < MAX_SPHERE; i++) {
+
+            if(hit_sphere(spheres[i], ray, tMin, closest, temp)) {
+                hitAnything = true;
+                closest = temp.t;
+                hit = temp;
+            }
+        }
+        return hitAnything;
+    } `,
 
     `// geting a ray (mainly finding the direction between the camera and viewport)
     Ray getRay(vec2 pixel) {
@@ -143,31 +165,43 @@ const pixelCode = [
         return ray;
     }`,
 
+    // `
+    // // calculates if a ray hits a sphere and the normals
+    // float hitSphere(vec3 spherePos, float radius, Ray ray) {
+    //     vec3 oc = ray.origin - spherePos;
+
+    //     float a = dot(ray.direction, ray.direction);
+    //     float half_b = dot(oc, ray.direction);
+    //     float c = dot(oc, oc) - radius * radius;
+    //     float discriminant = half_b * half_b - a * c;
+
+    //     if (discriminant < 0.0)
+    //         return -1.0;
+    //     else
+    //         return (-half_b - sqrt(discriminant) ) / (a);
+    // }`,
+
     `
-    // calculates if a ray hits a sphere and the normals
-    float hitSphere(vec3 spherePos, float radius, Ray ray) {
-        vec3 oc = ray.origin - spherePos;
+    vec3 pixelColor(vec2 pixel, Sphere[MAX_SPHERE] orb) {
+        hitRecord rec;
 
-        float a = dot(ray.direction, ray.direction);
-        float half_b = dot(oc, ray.direction);
-        float c = dot(oc, oc) - radius * radius;
-        float discriminant = half_b * half_b - a * c;
+        // rec.normal = vec3(1.0, 0.5, 0.0); // normal is affected
 
-        if (discriminant < 0.0)
-            return -1.0;
-        else
-            return (-half_b - sqrt(discriminant) ) / (a);
-    }`,
-
-    `
-    vec3 pixelColor(vec2 pixel) {
         vec3 color = vec3(0., 0., 0.);
 
         // we are creating a ray instance for every pixel
         Ray ray = getRay(pixel);
 
+        if (hitList(orb, ray, 0.0, INFINITY, rec)) {
+            color = 0.5 * (rec.normal + vec3(1.0, 1.0, 1.0));
+            return color; 
+        }
+
         // creating a sphere and its normals (t is a point on the ray {P(t) = A + tb})
-        float t = hitSphere(vec3 (0.0, 0.0, -1.0), 0.5, ray);
+        // float t = hitSphere(vec3 (0.0, 0.0, -1.0), 0.5, ray); (old no longer used)
+
+        // background section
+        float t = 0.0;
 
         if (t > 0.0) {
             vec3 N = normalize(pointOnRay(ray, t) - vec3(0.0, 0.0, -1.0));
@@ -218,7 +252,14 @@ const Raytrace = () => {
                     ${pixelCode.join("\n//----------------")} // interjected code
 
                     void main() {
-                        fragColor = vec4(pixelColor(gl_FragCoord.xy), 1.0);
+
+                        // setting up every sphere
+                        Sphere world[MAX_SPHERE];
+
+                        world[0] = Sphere(vec3(0.0, 0.0, -1.0), 0.5);
+                        world[1] = Sphere(vec3(0.0, -100.5, -1.0), 100.0);
+
+                        fragColor = vec4(pixelColor(gl_FragCoord.xy, world), 1.0);
                     }`
         };
 
