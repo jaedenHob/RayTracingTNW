@@ -56,6 +56,19 @@ const pixelCode = [
     }`,
 
     `
+    // defining a camera
+    struct Camera {
+        float focal;
+        vec3 origin;
+        vec3 viewport_u;
+        vec3 viewport_v;
+        vec3 pixel_delta_u;
+        vec3 pixel_delta_v;
+        vec3 viewport_upper_left;
+        vec3 pixel00_loc;
+    };`,
+
+    `
     // defining a ray
     struct Ray {
         vec3 origin;
@@ -78,6 +91,13 @@ const pixelCode = [
     };`,
 
     `
+    // defining a sphere
+    struct Sphere {
+        vec3 center;
+        float radius;
+    };`,
+
+    `
     // defining if the ray is hitting the inside or outside and makeing the normal point accordingly
     void setFaceNormal(Ray ray, vec3 outwardNormal, out hitRecord rec) {
 
@@ -87,13 +107,6 @@ const pixelCode = [
 
         return;
     }`,
-
-    `
-    // defining a sphere
-    struct Sphere {
-        vec3 center;
-        float radius;
-    };`,
 
     `
     // defining the specific point on a ray
@@ -154,10 +167,9 @@ const pixelCode = [
         return hitAnything;
     } `,
 
-    `// geting a ray (mainly finding the direction between the camera and viewport)
-    Ray getRay(vec2 pixel) {
-        Ray ray;
-
+    `// generating a camera
+    Camera getCamera() {
+        // camera setup (stays the same)
         float focal_length = 1.0;
 
         vec3 viewport_u = vec3(viewport_width, 0, 0);
@@ -168,23 +180,28 @@ const pixelCode = [
         // Calculate the location of the upper left pixel.
         vec3 viewport_upper_left = camera_center - vec3(0, 0, focal_length) - viewport_u / 2.0 - viewport_v / 2.0;
         vec3 pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
-
-        vec3 pixelCenter = pixel00_loc + (pixel.x * pixel_delta_u) + (pixel.y * pixel_delta_v);
         
-        ray.origin = camera_center;
-        ray.direction = pixelCenter - camera_center;
-        return ray;
+        return Camera(1.0, vec3(0.0, 0.0, 0.0), viewport_u, viewport_v,
+                      pixel_delta_u, pixel_delta_v, viewport_upper_left, pixel00_loc);
+    }`,
+
+    `// generating a ray (mainly finding the direction between the camera and viewport)
+    Ray getRay(vec2 pixel, Camera cam) {
+        vec3 pixelCenter = cam.pixel00_loc + (pixel.x * cam.pixel_delta_u) + (pixel.y * cam.pixel_delta_v);
+        
+        return Ray(cam.origin, pixelCenter - cam.origin);
     }`,
 
     `
-    vec3 pixelColor(vec2 pixel, Sphere[MAX_SPHERE] orb) {
+    vec3 pixelColor(vec2 pixel, Camera cam, Sphere[MAX_SPHERE] orb) {
         hitRecord rec;
 
         vec3 color = vec3(0., 0., 0.);
 
         // we are creating a ray instance for every pixel
-        Ray ray = getRay(pixel);
+        Ray ray = getRay(pixel, cam);
 
+        // getting ray color
         if (hitList(orb, ray, interval(INFINITY, 0.0), rec)) {
             color = 0.5 * (rec.normal + vec3(1.0, 1.0, 1.0));
             return color; 
@@ -246,13 +263,16 @@ const Raytrace = () => {
 
                     void main() {
 
+                        // initialize camera
+                        Camera cam = getCamera();
+
                         // setting up every sphere
                         Sphere world[MAX_SPHERE];
 
                         world[0] = Sphere(vec3(0.0, 0.0, -1.0), 0.5);
                         world[1] = Sphere(vec3(0.0, -100.5, -1.0), 100.0);
 
-                        fragColor = vec4(pixelColor(gl_FragCoord.xy, world), 1.0);
+                        fragColor = vec4(pixelColor(gl_FragCoord.xy, cam, world), 1.0);
                     }`
         };
 
