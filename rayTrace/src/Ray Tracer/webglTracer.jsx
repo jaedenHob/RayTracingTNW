@@ -165,22 +165,6 @@ const pixelCode = [
         return ray;
     }`,
 
-    // `
-    // // calculates if a ray hits a sphere and the normals
-    // float hitSphere(vec3 spherePos, float radius, Ray ray) {
-    //     vec3 oc = ray.origin - spherePos;
-
-    //     float a = dot(ray.direction, ray.direction);
-    //     float half_b = dot(oc, ray.direction);
-    //     float c = dot(oc, oc) - radius * radius;
-    //     float discriminant = half_b * half_b - a * c;
-
-    //     if (discriminant < 0.0)
-    //         return -1.0;
-    //     else
-    //         return (-half_b - sqrt(discriminant) ) / (a);
-    // }`,
-
     `
     vec3 pixelColor(vec2 pixel, Sphere[MAX_SPHERE] orb) {
         hitRecord rec;
