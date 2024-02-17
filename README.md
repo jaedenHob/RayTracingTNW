@@ -19,7 +19,7 @@ soft shadows from multiple light sources.
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/27b31637-4c2f-4979-893f-ddddcc0a2f01)
 
 # By using random numbers to create noise I was able to implement anti-aliasing through pixel sampling
-![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/f392c663-4541-4fe1-a1d5-2dc1f88bfcf0)
+![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/fcb96ed3-f2fd-436e-8281-937b59cda2fb)
 
 
 Above is the raytracer itself (In progress).
