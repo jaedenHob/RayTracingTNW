@@ -12,6 +12,7 @@ function hex2rgb(hex) {
         .map(l => parseInt(hex.length % 2 ? l + l : l, 16) / 255);
 }
 
+const resolution = [800.0, 600.0];
 
 // rendered image setup
 const aspect_ratio = 16.0 / 9.0;
@@ -35,6 +36,7 @@ const pixelCode = [
     uniform float image_width;
     uniform float viewport_width;
     uniform float viewport_height;
+    uniform vec2 resolution;
     `,
 
     `
@@ -42,9 +44,27 @@ const pixelCode = [
     #define PI 3.1415926538
     #define INFINITY 1.0 / 0.00000000001
     #define MAX_SPHERE 2
+    #define RAND_MAX 2147483647.0
+    #define SAMPLES_PER_PIXEL 100.0
     `,
 
     // utility functions
+
+    `// for generating random numbers (https://thebookofshaders.com/10/)
+    float random(vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123 / 43758.5453123);
+    }`,
+
+    `// random real number within [0,1]
+    float randomReal(vec2 st) {
+        return random(st);
+    }`,
+
+    ` random real within [min, max]
+    float randomRealRestricted(vec2 st, float min, float max) {
+        return min + (max - min) * randomReal(st);
+    }`,
+
     `// from degrees to radians
     float degrees_to_radians(float degrees) {
         return degrees * PI / 180.0;
@@ -59,6 +79,9 @@ const pixelCode = [
     // defining a camera
     struct Camera {
         float focal;
+
+        float samples;
+
         vec3 origin;
         vec3 viewport_u;
         vec3 viewport_v;
@@ -181,34 +204,38 @@ const pixelCode = [
         vec3 viewport_upper_left = camera_center - vec3(0, 0, focal_length) - viewport_u / 2.0 - viewport_v / 2.0;
         vec3 pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
         
-        return Camera(1.0, vec3(0.0, 0.0, 0.0), viewport_u, viewport_v,
-                      pixel_delta_u, pixel_delta_v, viewport_upper_left, pixel00_loc);
+        return Camera(1.0, SAMPLES_PER_PIXEL, vec3(0.0, 0.0, 0.0), viewport_u,
+                      viewport_v, pixel_delta_u, pixel_delta_v, viewport_upper_left, pixel00_loc);
+    }`,
+
+    `// selecting random points in a square surrounding a pixel
+    vec3 sampleSquare(vec2 pixel, Camera cam, float i) {
+        vec2 st = (pixel + i) / resolution;
+        st *= 10.0;
+        float px = -0.5 + randomReal(st);
+        float py = -0.5 + randomReal(st.yx);
+        return (px * cam.pixel_delta_u) + (py * cam.pixel_delta_v);
     }`,
 
     `// generating a ray (mainly finding the direction between the camera and viewport)
-    Ray getRay(vec2 pixel, Camera cam) {
+    Ray getRay(vec2 pixel, Camera cam, float i) {
         vec3 pixelCenter = cam.pixel00_loc + (pixel.x * cam.pixel_delta_u) + (pixel.y * cam.pixel_delta_v);
-        
-        return Ray(cam.origin, pixelCenter - cam.origin);
+        vec3 pixelSample = pixelCenter + sampleSquare(pixel, cam, i);
+
+        return Ray(cam.origin, pixelSample - cam.origin);
     }`,
 
     `
-    vec3 pixelColor(vec2 pixel, Camera cam, Sphere[MAX_SPHERE] orb) {
+    // function for ray color logic to reduce size of pixel color
+    vec3 rayColor(vec2 pixel, Sphere[MAX_SPHERE] orb, Ray ray) {
         hitRecord rec;
-
-        vec3 color = vec3(0., 0., 0.);
-
-        // we are creating a ray instance for every pixel
-        Ray ray = getRay(pixel, cam);
+        vec3 color;
 
         // getting ray color
         if (hitList(orb, ray, interval(INFINITY, 0.0), rec)) {
             color = 0.5 * (rec.normal + vec3(1.0, 1.0, 1.0));
             return color; 
         }
-
-        // creating a sphere and its normals (t is a point on the ray {P(t) = A + tb})
-        // float t = hitSphere(vec3 (0.0, 0.0, -1.0), 0.5, ray); (old no longer used)
 
         // background section
         float t = 0.0;
@@ -224,6 +251,37 @@ const pixelCode = [
         color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
 
         return color;
+    }`,
+
+    `// function meant for doing the sampling process
+    vec3 sampleColor(vec3 color) {
+        float r = color.x;
+        float g = color.y;
+        float b = color.z;
+
+        // Divide the color by the number of samples.
+        float scale = 1.0 / SAMPLES_PER_PIXEL;
+        r *= scale;
+        g *= scale;
+        b *= scale;
+
+        interval intensity = interval(0.000, 1.0);
+
+        return vec3(r,g,b);
+    }`,
+
+    `
+    vec3 pixelColor(vec2 pixel, Camera cam, Sphere[MAX_SPHERE] orb) {
+        vec3 color;
+
+        for (float i; i < SAMPLES_PER_PIXEL; i++) {
+            // we are creating a ray instance for every pixel
+            Ray ray = getRay(pixel, cam, i);
+
+            color += rayColor(pixel, orb, ray);
+        }
+
+        return sampleColor(color);
     }`
 ]
 
@@ -304,6 +362,7 @@ const Raytrace = () => {
             image_width: image_width,
             viewport_height: viewport_height,
             viewport_width: viewport_width,
+            resolution: resolution
             
         };
 
