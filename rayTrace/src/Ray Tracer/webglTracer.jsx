@@ -46,18 +46,14 @@ const pixelCode = [
     #define MAX_SPHERE 2
     #define RAND_MAX 2147483647.0
     #define SAMPLES_PER_PIXEL 100.0
+    #define RAY_BOUNCES 50
     `,
 
     // utility functions
 
-    `// for generating random numbers (https://thebookofshaders.com/10/)
-    float random(vec2 st) {
-        return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123 / 43758.5453123);
-    }`,
-
-    `// random real number within [0,1]
+    `// random real number within [0,1] (https://thebookofshaders.com/10/)
     float randomReal(vec2 st) {
-        return random(st);
+        return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
     }`,
 
     ` // random real within [min, max]
@@ -65,10 +61,43 @@ const pixelCode = [
         return min + (max - min) * randomReal(st);
     }`,
 
-    // ` // random vector function
-    // float randomVector(vec2 st) {
-    //     return (vec3());
-    // }`,
+    ` // random vector function
+    vec3 randomVector(vec2 st) {
+        return (vec3(randomReal(st), randomReal(st), randomReal(st)));
+    }`,
+
+    ` // random vector function
+    vec3 randomVectorRestricted(vec2 st, float min, float max) {
+        return (vec3(randomReal(st), randomReal(st), randomReal(st)));
+    }`,
+
+    ` // random vector in sphere function
+    vec3 randomInUnitSphere(vec2 st) {
+        while (true) {
+            vec3 p = vec3(randomRealRestricted(st * 12., -1.0, 1.0), 
+                          randomRealRestricted(st * 3.0, -1.0, 1.0), 
+                          randomRealRestricted(st * 8.0, -1.0, 1.0));
+
+            if (dot(p, p) < 1.0) {
+                return p;
+            }
+        }
+    }`,
+
+    ` // random unit vector in sphere function
+    vec3 randomUnitVector(vec2 st) {
+        return (normalize(randomInUnitSphere(st)));
+    }`,
+
+    ` // random unit vector checked if on the right sphere hemisphere
+    vec3 randomOnHemisphere(vec2 st, vec3 normal) {
+        vec3 onUnitSphere = randomUnitVector(st);
+
+        if (dot(onUnitSphere, normal) > 0.0) 
+            return onUnitSphere;
+        else
+            return -onUnitSphere;
+    }`,
 
     `// from degrees to radians
     float degrees_to_radians(float degrees) {
@@ -110,6 +139,11 @@ const pixelCode = [
         vec3 normal;
         float t;
         bool frontFace;
+    };`,
+
+    `// defining st 
+    struct noise {
+        vec2 rand;
     };`,
 
     `// defining interval which is the minimum and maximum value of t
@@ -214,48 +248,60 @@ const pixelCode = [
     }`,
 
     `// selecting random points in a square surrounding a pixel
-    vec3 sampleSquare(vec2 pixel, Camera cam, float i) {
+    vec3 sampleSquare(vec2 pixel, Camera cam, float i, out noise v) {
         vec2 st = (pixel + i) / resolution;
         st *= 10.0;
+
+        v.rand = st;
+
         float px = -0.5 + randomReal(st);
         float py = -0.5 + randomReal(st.yx);
         return (px * cam.pixel_delta_u) + (py * cam.pixel_delta_v);
     }`,
 
     `// generating a ray (mainly finding the direction between the camera and viewport)
-    Ray getRay(vec2 pixel, Camera cam, float i) {
+    Ray getRay(vec2 pixel, Camera cam, float i, out noise vari) {
         vec3 pixelCenter = cam.pixel00_loc + (pixel.x * cam.pixel_delta_u) + (pixel.y * cam.pixel_delta_v);
-        vec3 pixelSample = pixelCenter + sampleSquare(pixel, cam, i);
+        vec3 pixelSample = pixelCenter + sampleSquare(pixel, cam, i, vari);
 
         return Ray(cam.origin, pixelSample - cam.origin);
     }`,
 
     `
     // function for ray color logic to reduce size of pixel color
-    vec3 rayColor(vec2 pixel, Sphere[MAX_SPHERE] orb, Ray ray) {
+    vec3 rayColor(vec2 pixel, Sphere[MAX_SPHERE] orb, Ray ray, vec2 vari) {
         hitRecord rec;
-        vec3 color;
 
-        // getting ray color
-        if (hitList(orb, ray, interval(0.0, INFINITY), rec)) {
-            color = 0.5 * (rec.normal + vec3(1.0, 1.0, 1.0));
-            return color; 
+        Ray curr = ray;
+
+        int bounce = 0;
+
+        vec3 attentuation = vec3(1.0);
+        vec3 direction;
+
+        while (bounce <= RAY_BOUNCES) {
+            // ray hits obstacle
+            if (hitList(orb, curr, interval(0.0, INFINITY), rec)) {
+                // new ray direction
+                direction = randomOnHemisphere((vari + float(bounce)) / resolution, rec.normal);
+
+                curr.origin = rec.p;
+                curr.direction = direction;
+
+                // increment bounce
+                bounce++;
+
+                attentuation *= 0.5;
+            } else {
+                // background section
+                // logic for creating background blue -> white gradient
+                vec3 unitDirection = normalize(curr.direction);
+                float a = 0.5 * (unitDirection.y + 1.0);
+                vec3 color = attentuation * ((1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0));
+
+                return color;
+            }
         }
-
-        // background section
-        float t = 0.0;
-
-        if (t > 0.0) {
-            vec3 N = normalize(pointOnRay(ray, t) - vec3(0.0, 0.0, -1.0));
-            return 0.5 * vec3(N.x + 1.0, N.y + 1.0, N.z + 1.0);
-        }
-
-        // logic for creating background blue -> white gradient
-        vec3 unitDirection = normalize(ray.direction);
-        float a = 0.5 * (unitDirection.y + 1.0);
-        color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
-
-        return color;
     }`,
 
     `// function meant for doing the sampling process
@@ -280,12 +326,13 @@ const pixelCode = [
     `
     vec3 pixelColor(vec2 pixel, Camera cam, Sphere[MAX_SPHERE] orb) {
         vec3 color;
+        noise variability;
 
         for (float i; i < SAMPLES_PER_PIXEL; i++) {
             // we are creating a ray instance for every pixel
-            Ray ray = getRay(pixel, cam, i);
+            Ray ray = getRay(pixel, cam, i, variability);
 
-            color += rayColor(pixel, orb, ray);
+            color += rayColor(pixel, orb, ray, pixel.yx);
         }
 
         return sampleColor(color);
