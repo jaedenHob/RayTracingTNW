@@ -60,10 +60,15 @@ const pixelCode = [
         return random(st);
     }`,
 
-    ` random real within [min, max]
+    ` // random real within [min, max]
     float randomRealRestricted(vec2 st, float min, float max) {
         return min + (max - min) * randomReal(st);
     }`,
+
+    // ` // random vector function
+    // float randomVector(vec2 st) {
+    //     return (vec3());
+    // }`,
 
     `// from degrees to radians
     float degrees_to_radians(float degrees) {
@@ -109,8 +114,8 @@ const pixelCode = [
 
     `// defining interval which is the minimum and maximum value of t
     struct interval {
-        float max;
         float min;
+        float max;
     };`,
 
     `
@@ -232,7 +237,7 @@ const pixelCode = [
         vec3 color;
 
         // getting ray color
-        if (hitList(orb, ray, interval(INFINITY, 0.0), rec)) {
+        if (hitList(orb, ray, interval(0.0, INFINITY), rec)) {
             color = 0.5 * (rec.normal + vec3(1.0, 1.0, 1.0));
             return color; 
         }
@@ -265,9 +270,11 @@ const pixelCode = [
         g *= scale;
         b *= scale;
 
-        interval intensity = interval(0.000, 1.0);
+        interval intensity = interval(0.0, 1.0);
 
-        return vec3(r,g,b);
+        return vec3(clamp(r, intensity.min, intensity.max),
+                    clamp(g, intensity.min, intensity.max),
+                    clamp(b, intensity.min, intensity.max));
     }`,
 
     `
