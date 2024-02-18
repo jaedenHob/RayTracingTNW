@@ -34,5 +34,5 @@ then
 when within the application directory {/Ray Tracing/rayTrace$}.
 
 ## Or if you want to see it run on your computer. May take a couple of minutes for the site to start up.
-## (WARNING ray-tracing is expensive and requires a strong GPU. I am planning in the future to have settings for adjustability)
+# (WARNING ray-tracing is expensive and requires a strong GPU. I am planning in the future to have settings for adjustability)
 [Click Here](https://ray-trace.onrender.com/)
