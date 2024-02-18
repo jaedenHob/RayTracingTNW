@@ -21,6 +21,8 @@ soft shadows from multiple light sources.
 ## By using random numbers to create noise I was able to implement anti-aliasing through pixel sampling
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/fcb96ed3-f2fd-436e-8281-937b59cda2fb)
 
+## instead of normals the color is based on the attenuation value that increases when a ray bounces more
+![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/98f118b5-5845-432e-96d6-3c765f6bd1a9)
 
 Above is the raytracer itself (In progress).
 
@@ -29,7 +31,7 @@ Above is the raytracer itself (In progress).
 `npm install`
 then
 `npm run dev`
-when within the application directory.
+when within the application directory {/Ray Tracing/rayTrace$}.
 
 ## Or if you want to see it run on your computer. May take a couple of minutes for the site to start up.
 ## (WARNING ray-tracing is expensive and requires a strong GPU. I am planning in the future to have settings for adjustability)
