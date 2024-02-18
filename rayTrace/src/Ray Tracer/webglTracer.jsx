@@ -276,7 +276,7 @@ const pixelCode = [
 
         int bounce = 0;
 
-        vec3 attentuation = vec3(1.0);
+        vec3 attenuation = vec3(1.0);
         vec3 direction;
 
         while (bounce <= RAY_BOUNCES) {
@@ -291,13 +291,13 @@ const pixelCode = [
                 // increment bounce
                 bounce++;
 
-                attentuation *= 0.5;
+                attenuation *= 0.5;
             } else {
                 // background section
                 // logic for creating background blue -> white gradient
                 vec3 unitDirection = normalize(curr.direction);
                 float a = 0.5 * (unitDirection.y + 1.0);
-                vec3 color = attentuation * ((1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0));
+                vec3 color = attenuation * ((1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0));
 
                 return color;
             }
