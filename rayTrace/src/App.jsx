@@ -91,7 +91,7 @@ function App() {
   return (
     <>
       <NavBar />
-      
+
       <h1>Ray Tracing Project</h1>
 
       <div className='centered-container'>
