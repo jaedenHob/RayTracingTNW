@@ -1,8 +1,13 @@
 import { useEffect, useRef} from 'react';
-import * as twgl from 'twgl.js';
+
+import NavBar from './Header/NavBar.jsx';
+
 import Raycast from './2D Ray Casting/raycast.jsx';
 import Webgl2D from './2D webgl shading/webgl2D.jsx';
 import Raytrace from './Ray Tracer/webglTracer.jsx';
+
+import * as twgl from 'twgl.js';
+
 import './App.css';
 
 const shaders = {
@@ -85,6 +90,8 @@ function App() {
 
   return (
     <>
+      <NavBar />
+      
       <h1>Ray Tracing Project</h1>
 
       <div className='centered-container'>
@@ -143,7 +150,7 @@ function App() {
 
         <br />
 
-        <Raytrace />
+        {/* <Raytrace /> */}
         
       </div>
 
