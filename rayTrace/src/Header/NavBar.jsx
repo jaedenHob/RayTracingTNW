@@ -1,4 +1,8 @@
 import React from 'react'
+import { NavLink } from 'react-router-dom';
+import Home from '../Pages/Home.jsx';
+
+
 
 import {
     Navbar,
@@ -8,7 +12,6 @@ import {
     IconButton,
     Card,
 } from "@material-tailwind/react";
-
 
 
 const NavBar = () => {
@@ -29,9 +32,7 @@ const NavBar = () => {
                 color="blue-gray"
                 className="p-1 font-normal"
             >
-                <a href="#" className="flex items-center">
-                    2D Rays
-                </a>
+                <NavLink to="/about">About</NavLink>
             </Typography>
             <Typography
                 as="li"
@@ -39,9 +40,7 @@ const NavBar = () => {
                 color="blue-gray"
                 className="p-1 font-normal"
             >
-                <a href="#" className="flex items-center">
-                    2D Shadows
-                </a>
+                <NavLink to="/rays">2D Ray Casting</NavLink>
             </Typography>
             <Typography
                 as="li"
@@ -49,23 +48,29 @@ const NavBar = () => {
                 color="blue-gray"
                 className="p-1 font-normal"
             >
-                <a href="#" className="flex items-center">
-                    3D Webgl
-                </a>
+                <NavLink to="/shadows">2D Shadows</NavLink>
+            </Typography>
+            <Typography
+                as="li"
+                variant="small"
+                color="blue-gray"
+                className="p-1 font-normal"
+            >
+                <NavLink to="/InOneWeekend">Webgl Ray Tracer</NavLink>
             </Typography>
         </ul>
     );
 
   return (
     <>
-        <Navbar className="sticky top-0 z-10 h-max max-w-full rounded-1 px-4 py-2 lg:px-8 lg:py-4">
+          <Navbar className="sticky top-0 z-10 h-max max-w-full rounded-1 px-4 py-2 lg:px-8 lg:py-4 bg-amber-100">
             <div className="flex items-center justify-between text-blue-gray-900">
                 <Typography
                     as="a"
                     href="#"
                     className="mr-4 cursor-pointer py-1.5 font-medium"
                 >
-                    Ray Tracer
+                    <NavLink to="/">Ray Tracing</NavLink>
                 </Typography>
                 <div className="flex items-center gap-4">
                     <div className="mr-4 hidden lg:block">{navList}</div>

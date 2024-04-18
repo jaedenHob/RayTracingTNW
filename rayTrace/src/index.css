@@ -19,21 +19,36 @@ body {
   /* place-items: center; */
   min-width: 320px;
   min-height: 100vh;
+  text-align: left;
 }
 
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+  font-weight: 600;
+  color: #F9A620;
+  text-decoration: inherit; 
+  text-decoration: underline;
+
+  text-shadow:
+      -1px -1px 0 #000,
+      1px -1px 0 #000,
+      -1px 1px 0 #000,
+      1px 1px 0 #000;
+}
+
+a.active {
+  color: #1da1d5;
 }
 
 a:hover {
-  color: #535bf2;
+  /* color: #3eef49; */
+    color: #6BBF59;
 }
+
 
 h1 {
   font-size: 3.2em;
   line-height: 1.1;
+  text-align: center;
 }
 
 /* :root {

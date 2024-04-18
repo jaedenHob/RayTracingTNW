@@ -1,6 +1,13 @@
 import { useEffect, useRef} from 'react';
+import { Routes, Route } from 'react-router-dom';
 
+// Navigation and pages
 import NavBar from './Header/NavBar.jsx';
+import Home from './Pages/Home.jsx';
+import About from './Pages/About.jsx';
+import Rays from './Pages/Rays.jsx';
+import Shadows from './Pages/Shadows.jsx';
+import RTIOW from './Pages/RTIOW.jsx';
 
 import Raycast from './2D Ray Casting/raycast.jsx';
 import Webgl2D from './2D webgl shading/webgl2D.jsx';
@@ -91,16 +98,24 @@ function App() {
   return (
     <>
       <NavBar />
+    
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/about" element={<About />} />
+        <Route path="/rays" element={<Rays />} />
+        <Route path="/shadows" element={<Shadows />} />
+        <Route path="/InOneWeekend" element={<RTIOW />} />
+      </Routes>
 
-      <h1>Ray Tracing Project</h1>
+      {/* <h1>Ray Tracing Project</h1> */}
 
       <div className='centered-container'>
         <p>
           After my computer graphics course in college I enjoyed the process of designing a game using all
           the techniques that was learned. However, I felt that there was a valuable learning  experience I missed
           out on building a ray tracer. So this project will aim to do just that. My process begun by reading
-          up on it in
-          <a href='https://raytracing.github.io/books/RayTracingInOneWeekend.html#overview'> ray tracing in one weekend</a>.  The reference material is in C++, but I will stick to what
+          up on it in {" "}
+          <a href='https://raytracing.github.io/books/RayTracingInOneWeekend.html#overview'>ray tracing in one weekend</a>.  The reference material is in C++, but I will stick to what
           I'm accustomed  to with javascript and webgl. Ray tracing is a complex subject so I don't expect
           to complete this in one weekend, but lets see I how far I can get.
         </p>
