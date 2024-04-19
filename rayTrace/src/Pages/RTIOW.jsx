@@ -6,6 +6,7 @@ const RTIOW = () => {
   return (
     <>
       <div className='centered-container'>
+        <h2>Ray Tracing Part one</h2>
         {/* <Raytrace /> */}
       </div>
     </>

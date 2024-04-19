@@ -6,7 +6,7 @@ const Rays = () => {
   return (
     <>
       <div className='centered-container'>
-        <h1>Light Source and rays (Ray Casting) </h1>
+        <h2>Light Source and rays (Ray Casting) </h2>
 
         <p>
           So first to simplify things to get the concepts and the logic down. I'll do ray casting.
@@ -17,7 +17,7 @@ const Rays = () => {
         </p>
 
         <br />
-        
+
         <Raycast />
 
         <br />

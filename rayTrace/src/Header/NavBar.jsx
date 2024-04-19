@@ -64,8 +64,8 @@ const NavBar = () => {
 
   return (
     <>
-          <Navbar className="sticky top-0 z-10 h-max max-w-full rounded-1 px-4 py-2 lg:px-8 lg:py-4 bg-amber-100">
-            <div className="flex items-center justify-between text-blue-gray-900">
+        <Navbar className="sticky top-0 z-10 h-max max-w-full rounded-1 px-4 py-2 lg:px-8 lg:py-4 bg-amber-100">
+            <div className="flex items-center justify-center text-blue-gray-900">
                 <Typography
                     as="li"
                     href="#"
