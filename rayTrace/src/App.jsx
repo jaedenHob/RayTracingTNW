@@ -1,4 +1,4 @@
-import { useEffect, useRef} from 'react';
+import { Suspense, useEffect, useRef} from 'react';
 import { Routes, Route } from 'react-router-dom';
 
 // Navigation and pages
@@ -20,13 +20,15 @@ function App() {
 
       <br />
     
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/rays" element={<Rays />} />
-        <Route path="/shadows" element={<Shadows />} />
-        <Route path="/InOneWeekend" element={<RTIOW />} />
-      </Routes>
+      <Suspense fallback={<div className="container">Loading...</div>}>
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/about" element={<About />} />
+          <Route path="/rays" element={<Rays />} />
+          <Route path="/shadows" element={<Shadows />} />
+          <Route path="/InOneWeekend" element={<RTIOW />} />
+        </Routes>
+      </Suspense>
       
     </>
   )
