@@ -11,6 +11,7 @@ import {
     Button,
     IconButton,
     Card,
+    Collapse,
 } from "@material-tailwind/react";
 
 
@@ -66,7 +67,7 @@ const NavBar = () => {
           <Navbar className="sticky top-0 z-10 h-max max-w-full rounded-1 px-4 py-2 lg:px-8 lg:py-4 bg-amber-100">
             <div className="flex items-center justify-between text-blue-gray-900">
                 <Typography
-                    as="a"
+                    as="li"
                     href="#"
                     className="mr-4 cursor-pointer py-1.5 font-medium"
                 >
@@ -113,9 +114,9 @@ const NavBar = () => {
                     </IconButton>
                 </div>
             </div>
-            <MobileNav open={openNav}>
+            <Collapse open={openNav}>
                 {navList}
-            </MobileNav>
+            </Collapse>
         </Navbar>
 
         {/* <div className="mx-auto max-w-screen-md py-12">

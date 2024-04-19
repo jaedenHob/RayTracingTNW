@@ -1,4 +1,5 @@
 import React from 'react'
+
 import render_image from '../assets/FinalRenderQuick.png'
 
 const Home = () => {

@@ -1,8 +1,14 @@
 import React from 'react'
 
+import Raytrace from '../Components/webglTracer'
+
 const RTIOW = () => {
   return (
-    <div>Ray tracing in one weekend</div>
+    <>
+      <div className='centered-container'>
+        {/* <Raytrace /> */}
+      </div>
+    </>
   )
 }
 

@@ -24,7 +24,7 @@ body {
 
 a {
   font-weight: 600;
-  color: #F9A620;
+  color: #c9c5be;
   text-decoration: inherit; 
   text-decoration: underline;
 
@@ -36,12 +36,12 @@ a {
 }
 
 a.active {
-  color: #1da1d5;
+  color: #6BBF59;
 }
 
 a:hover {
   /* color: #3eef49; */
-    color: #6BBF59;
+    color: #fafbf9;
 }
 
 
