@@ -28,10 +28,10 @@ const About = () => {
         <div className='p-3 centered-container'>
           <img src={ GraphicsPipeline }/>
 
-          <text className='p-3'>
+          <p className='p-3'>
             Abstract representation of the different stages for the 
             graphics pipline. From: learnopengl.com
-          </text>
+          </p>
         </div>
 
         <h2 className='p-3'>Hello Triangle</h2>
