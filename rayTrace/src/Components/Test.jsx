@@ -1,6 +1,20 @@
 import React, { useRef, useEffect } from 'react';
 
-// constants
+// Supporting things such as functions and variables
+const aspect_ratio = 16.0 / 9.0;
+const width = 800;
+
+// calculate image height
+const image_height = width / aspect_ratio;
+const height = (image_height < 1) ? 1 : image_height;
+
+// viewport width
+const viewport_height = 2.0;
+const viewport_width = viewport_height * (width / image_height);
+
+// glsl code for supporting functions. It is not possible to have objects
+// so instead we create structs that will be treated as object which can
+// be usefull for defining things such as rays or spheres.
 
 const Canvas = () => {
     const canvasRef = useRef(null);
@@ -26,11 +40,12 @@ const Canvas = () => {
         const fragmentShaderSource = `
             precision mediump float;
             uniform float u_time;
+
             
             void main() {
                 // Calculate normalized coordinates in the range [0, 1]
-                float r = gl_FragCoord.x / 800.0;
-                float g = gl_FragCoord.y / 600.0;
+                float r = gl_FragCoord.x / 400.0;
+                float g = gl_FragCoord.y / 300.0;
                 float b = 0.0; // Blue component is set to 0
 
                 // Convert normalized coordinates to color values in the range [0, 255]
@@ -43,23 +58,6 @@ const Canvas = () => {
             }
         `;
 
-        // const fragmentShaderSource = `
-        //     precision mediump float;
-        //     uniform float u_time;
-        //     void main() {
-                
-        //         // Normalize coordinates to range [0, 1]
-        //         float x = gl_FragCoord.x / (800.0); // Canvas width
-        //         float y = gl_FragCoord.y / (600.0); // Canvas height
-
-        //         // color values
-        //         float ir = int(255.999 * r);
-        //         float ig = int(255.999 * g);
-        //         float ib = int(255.999 * b);
-
-        //         gl_FragColor = vec4(ir, ig, ib, 1.0);
-        //     }
-        // `;
         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(vertexShader, vertexShaderSource);
         gl.compileShader(vertexShader);
@@ -108,16 +106,23 @@ const Canvas = () => {
 
         const interval = setInterval(() => {
             if (!isRendering) {
-                isRendering = true;
+                // isRendering = true;
+
                 paintPixel();
-                renderFrame();
+                
+                if (pixels.current.length % 1000 === 0) {
+                    console.log("lucky");
+                    renderFrame();
+                }
+                // paintPixel();
+                // renderFrame();
             }
-        }, 0.01); // Adjust throttle time
+        }, 1); // Adjust throttle time
 
         return () => clearInterval(interval);
     }, []);
 
-    return <canvas ref={canvasRef} width={400} height={300} />;
+    return <canvas ref={canvasRef} width={width} height={height} />;
 };
 
 export default Canvas;
