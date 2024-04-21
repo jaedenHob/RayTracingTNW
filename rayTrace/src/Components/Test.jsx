@@ -1,5 +1,7 @@
 import React, { useRef, useEffect } from 'react';
 
+// constants
+
 const Canvas = () => {
     const canvasRef = useRef(null);
     const pixels = useRef([]);
@@ -24,11 +26,40 @@ const Canvas = () => {
         const fragmentShaderSource = `
             precision mediump float;
             uniform float u_time;
+            
             void main() {
-                gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+                // Calculate normalized coordinates in the range [0, 1]
+                float r = gl_FragCoord.x / 800.0;
+                float g = gl_FragCoord.y / 600.0;
+                float b = 0.0; // Blue component is set to 0
+
+                // Convert normalized coordinates to color values in the range [0, 255]
+                int ir = int(255.999 * r);
+                int ig = int(255.999 * g);
+                int ib = int(255.999 * b);
+
+                // Output the color
+                gl_FragColor = vec4(float(ir) / 255.0, float(ig) / 255.0, float(ib) / 255.0, 1.0);
             }
         `;
 
+        // const fragmentShaderSource = `
+        //     precision mediump float;
+        //     uniform float u_time;
+        //     void main() {
+                
+        //         // Normalize coordinates to range [0, 1]
+        //         float x = gl_FragCoord.x / (800.0); // Canvas width
+        //         float y = gl_FragCoord.y / (600.0); // Canvas height
+
+        //         // color values
+        //         float ir = int(255.999 * r);
+        //         float ig = int(255.999 * g);
+        //         float ib = int(255.999 * b);
+
+        //         gl_FragColor = vec4(ir, ig, ib, 1.0);
+        //     }
+        // `;
         const vertexShader = gl.createShader(gl.VERTEX_SHADER);
         gl.shaderSource(vertexShader, vertexShaderSource);
         gl.compileShader(vertexShader);
@@ -60,7 +91,7 @@ const Canvas = () => {
         const paintPixel = () => {
             const x = Math.random() * 2 - 1;
             const y = Math.random() * 2 - 1;
-            console.log("X: " + x + "\nY: " + y);
+            // console.log("X: " + x + "\nY: " + y);
             pixels.current.push({ x, y });
         };
 
@@ -81,12 +112,12 @@ const Canvas = () => {
                 paintPixel();
                 renderFrame();
             }
-        }, 0.0001); // Adjust throttle time
+        }, 0.01); // Adjust throttle time
 
         return () => clearInterval(interval);
     }, []);
 
-    return <canvas ref={canvasRef} width={800} height={600} />;
+    return <canvas ref={canvasRef} width={400} height={300} />;
 };
 
 export default Canvas;

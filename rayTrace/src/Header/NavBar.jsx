@@ -59,6 +59,14 @@ const NavBar = () => {
             >
                 <NavLink to="/InOneWeekend">Webgl Ray Tracer</NavLink>
             </Typography>
+            <Typography
+                as="li"
+                variant="small"
+                color="blue-gray"
+                className="p-1 font-normal"
+            >
+                <NavLink to="/test">Testing</NavLink>
+            </Typography>
         </ul>
     );
 
