@@ -1,128 +1,181 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect } from 'react'
 
-// Supporting things such as functions and variables
-const aspect_ratio = 16.0 / 9.0;
-const width = 800;
+import * as twgl from 'twgl.js';
 
-// calculate image height
-const image_height = width / aspect_ratio;
-const height = (image_height < 1) ? 1 : image_height;
 
-// viewport width
-const viewport_height = 2.0;
-const viewport_width = viewport_height * (width / image_height);
+const Ping_pong_animation = () => {
+    // variables local to test
+    let width = 800;
+    let height = 600;
 
-// glsl code for supporting functions. It is not possible to have objects
-// so instead we create structs that will be treated as object which can
-// be usefull for defining things such as rays or spheres.
-
-const Canvas = () => {
+    // canvas reference
     const canvasRef = useRef(null);
-    const pixels = useRef([]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
-        const gl = canvas.getContext('webgl');
 
-        if (!gl) {
-            console.error('Unable to initialize WebGL. Your browser may not support it.');
-            return;
-        }
+        // gl initailization
+        const gl = canvas.getContext('webgl2');
 
-        const vertexShaderSource = `
-            attribute vec2 position;
-            void main() {
-                gl_Position = vec4(position, 0.0, 1.0);
-                gl_PointSize = 1.0;
-            }
-        `;
+        // initailizing ping-pong buffers
+        let fb1 = twgl.createFramebufferInfo(gl, undefined, width, height),
+            fb2 = twgl.createFramebufferInfo(gl, undefined, width, height),
+            temp = 0;
 
-        const fragmentShaderSource = `
+        // All Shaders
+
+        // initial shader
+        const initShader = {
+            // drawing particles
+            vInit: `
+            #version 300 es
             precision mediump float;
-            uniform float u_time;
-
+            in vec2 position;
+            out vec2 v_position;
             
             void main() {
-                // Calculate normalized coordinates in the range [0, 1]
-                float r = gl_FragCoord.x / 400.0;
-                float g = gl_FragCoord.y / 300.0;
-                float b = 0.0; // Blue component is set to 0
+                v_position = 0.5 * position + 0.5;
+                gl_Position = vec4(position, 0.0, 1.0);
+            }`,
 
-                // Convert normalized coordinates to color values in the range [0, 255]
-                int ir = int(255.999 * r);
-                int ig = int(255.999 * g);
-                int ib = int(255.999 * b);
-
-                // Output the color
-                gl_FragColor = vec4(float(ir) / 255.0, float(ig) / 255.0, float(ib) / 255.0, 1.0);
-            }
-        `;
-
-        const vertexShader = gl.createShader(gl.VERTEX_SHADER);
-        gl.shaderSource(vertexShader, vertexShaderSource);
-        gl.compileShader(vertexShader);
-        if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-            console.error('Vertex shader compilation failed:', gl.getShaderInfoLog(vertexShader));
-            return;
+            fInit: `
+            #version 300 es
+            precision mediump float;
+            in vec2 v_position;
+            out vec4 fragColor;
+            void main() {
+                fragColor = vec4(v_position, 0.0, 1.0);
+            }`,
         }
 
-        const fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-        gl.shaderSource(fragmentShader, fragmentShaderSource);
-        gl.compileShader(fragmentShader);
-        if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-            console.error('Fragment shader compilation failed:', gl.getShaderInfoLog(fragmentShader));
-            return;
+        // draw shader
+        const drawShaders = {
+            // drawing particles
+            vDraw: `#version 300 es
+            precision mediump float;
+
+            in vec2 vPosition;
+
+            out vec2 texCoord;
+            void main () {
+                texCoord = (vPosition+1.)/2.;
+                gl_Position = vec4(vPosition, 0., 1.0);
+            }`,
+            
+            fDraw: `#version 300 es
+            precision mediump float;
+            in vec2 texCoord;
+            out vec4 fragColor;
+            uniform sampler2D u_texture;
+            void main () {
+                fragColor = texture(u_texture, texCoord);
+            }`,
+        }
+        
+        // update shader
+        const updateShaders = {
+            // drawing particles
+            vUpdate: `
+            #version 300 es
+            precision mediump float;
+
+            in vec2 position;
+            out vec2 v_texcoord;
+            
+            void main() {
+                v_texcoord = 0.5 * position + 0.5;
+                gl_Position = vec4(position, 0.0, 1.0);
+            }`,
+
+            fUpdate: `
+            #version 300 es
+            precision mediump float;
+            in vec2 v_texcoord;
+            uniform sampler2D u_texture;
+            out vec4 fragColor;
+
+            void main() {
+                vec4 texColor = texture(u_texture, v_texcoord);
+                float r = texColor.r+0.004; if (r > 1.) r = 0.;
+                float g = texColor.g+0.004; if (g > 1.) g = 0.;
+                float b = 0.;//texColor.b+0.01; if (b > 1.) b = 0.;
+                fragColor = vec4(r,g,b,1.0);
+            }`,
         }
 
-        const program = gl.createProgram();
-        gl.attachShader(program, vertexShader);
-        gl.attachShader(program, fragmentShader);
-        gl.linkProgram(program);
-        gl.useProgram(program);
+        // program infos
+        const initProgramInfo = twgl.createProgramInfo(gl, [initShader.vInit, initShader.fInit]);
+        const drawProgramInfo = twgl.createProgramInfo(gl, [drawShaders.vDraw, drawShaders.fDraw]);
+        const updateProgramInfo = twgl.createProgramInfo(gl, [updateShaders.vUpdate, updateShaders.fUpdate]);
+        
 
-        const positionAttributeLocation = gl.getAttribLocation(program, 'position');
-        const positionBuffer = gl.createBuffer();
-        gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
-        gl.enableVertexAttribArray(positionAttributeLocation);
-        gl.vertexAttribPointer(positionAttributeLocation, 2, gl.FLOAT, false, 0, 0);
+        // supporting function
+        function render() {
+            twgl.resizeCanvasToDisplaySize(gl.canvas);
+            gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-        const paintPixel = () => {
-            const x = Math.random() * 2 - 1;
-            const y = Math.random() * 2 - 1;
-            // console.log("X: " + x + "\nY: " + y);
-            pixels.current.push({ x, y });
+            // drawing frame
+            gl.useProgram(drawProgramInfo.program);
+            twgl.setBuffersAndAttributes(gl, drawProgramInfo, positionBuffer);
+            twgl.setUniforms(drawProgramInfo, { u_texture: fb1.attachments[0] });
+            twgl.bindFramebufferInfo(gl, null);
+            twgl.drawBufferInfo(gl, positionBuffer, gl.TRIANGLE_FAN);
+
+            // update frame
+            gl.useProgram(updateProgramInfo.program);
+            twgl.setBuffersAndAttributes(gl, updateProgramInfo, positionBuffer);
+
+            twgl.setUniforms(updateProgramInfo, { u_texture: fb1.attachments[0] });
+            twgl.bindFramebufferInfo(gl, fb2);
+            twgl.drawBufferInfo(gl, positionBuffer, gl.TRIANGLE_FAN);
+
+            // ping-ponging buffers
+            temp = fb1;
+            fb1 = fb2;
+            fb2 = temp;
+        }
+
+        gl.clearColor(0, 0, 0, 1); // Choose a clear color
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+        const alignment = 1;
+        gl.pixelStorei(gl.UNPACK_ALIGNMENT, alignment);
+
+        const positionObject = {
+            position: { data: [1, 1, 1, -1, -1, -1, -1, 1], numComponents: 2 }
         };
 
-        let isRendering = false; // Local variable to track rendering state
+        const positionBuffer = twgl.createBufferInfoFromArrays(gl, positionObject);
 
-        const renderFrame = () => {
-            gl.clear(gl.COLOR_BUFFER_BIT);
-            gl.uniform1f(gl.getUniformLocation(program, 'u_time'), performance.now());
-            const positions = pixels.current.map(({ x, y }) => [x, y]).flat();
-            gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(positions), gl.STATIC_DRAW);
-            gl.drawArrays(gl.POINTS, 0, positions.length / 2);
-            isRendering = false;
+        // particle initialization
+        gl.useProgram(initProgramInfo.program);
+        twgl.setBuffersAndAttributes(gl, initProgramInfo, positionBuffer);
+        twgl.bindFramebufferInfo(gl, fb1);
+        twgl.drawBufferInfo(gl, positionBuffer, gl.TRIANGLE_FAN);
+
+        // Rendering loop function
+        const renderLoop = () => {
+            // Update canvas dimensions if necessary
+            twgl.resizeCanvasToDisplaySize(gl.canvas);
+
+            // Call rendering function
+            render();
+
+            // Request next frame
+            requestAnimationFrame(renderLoop);
         };
 
-        const interval = setInterval(() => {
-            if (!isRendering) {
-                // isRendering = true;
+        // Start rendering loop
+        renderLoop();
+            
+    })
+  return (
+    <>
+        <div className='centered-container'>
+              <canvas ref={canvasRef} width={width} height={height} />
+        </div>
+    </>
+  )
+}
 
-                paintPixel();
-                
-                if (pixels.current.length % 1000 === 0) {
-                    console.log("lucky");
-                    renderFrame();
-                }
-                // paintPixel();
-                // renderFrame();
-            }
-        }, 1); // Adjust throttle time
-
-        return () => clearInterval(interval);
-    }, []);
-
-    return <canvas ref={canvasRef} width={width} height={height} />;
-};
-
-export default Canvas;
+export default Ping_pong_animation
