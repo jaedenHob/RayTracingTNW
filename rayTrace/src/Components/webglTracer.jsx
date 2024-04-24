@@ -83,21 +83,6 @@ const pixelCode = [
     }`,
 
     `
-    // hitting a sphere (pre changes)
-    // float hit_sphere(in vec3 center, in float radius, in Ray r) {
-    //     vec3 oc = center - r.origin;
-    //     float a = dot(r.direction, r.direction);
-    //     float h = dot(r.direction, oc);
-    //     float c = dot(oc, oc) - radius * radius;
-    //     float discriminant = h * h - a * c;
-
-    //     if (discriminant < 0.0)
-    //         return -1.0;
-    //     else
-    //         return (h - sqrt(discriminant) ) / (a);
-    // }`,
-
-    `
     // comparison to whether a ray is inside or outside of a sphere
     void set_face_normal(Ray r, vec3 outward_normal, out hit_record rec) {
         // Sets the hit record normal vector.
@@ -137,7 +122,6 @@ const pixelCode = [
         vec3 outward_normal = (rec.p - center) / radius;
 
         set_face_normal(r, outward_normal, rec);
-        // rec.normal = (rec.p - center) / radius;
         return true;
     }`,
 
@@ -166,13 +150,6 @@ const pixelCode = [
         if (hit_list(world, ray, interval(0.0, INFINITY), rec)) {
             return 0.5 * (rec.normal + vec3(1., 1., 1.));
         }
-
-        // float t = hit_sphere(vec3(0.0, 0.0, -1.0), 0.5, ray);
-
-        // if (t > 0.0) {
-        //     vec3 N = normalize(point_on_ray(ray, t) - vec3(0, 0, -1));
-        //     return 0.5 * vec3(N.x + 1.0, N.y + 1.0, N.z + 1.0);
-        // }
 
         vec3 unit_direction = normalize(ray.direction);
         float a = 0.5 * (unit_direction.y + 1.0);
