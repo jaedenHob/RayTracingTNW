@@ -167,6 +167,7 @@ const pixelCode = [
     `
     // returns a random float value
     float rand(vec2 st) {
+        // newer version
         float a = 12.9898;
         float b = 78.223;
         float c = 43758.5453;
@@ -174,6 +175,9 @@ const pixelCode = [
         float sn = mod(dt, 3.14);
 
         return fract(sin(sn) * c);
+
+        // older version
+        // return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
     }`,
 
     `
@@ -211,10 +215,7 @@ const pixelCode = [
     `
     // returns a vector to a random point on a unit square
     vec3 random_in_unit_sphere(vec2 st) {
-        float vari = 0.0;
-
         while(true) {
-            st += vari;
             vec3 p = random_vector_interval(st, -1.0, 1.0);
             
             if (dot(p, p) < 1.) {
