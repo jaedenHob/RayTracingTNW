@@ -18,7 +18,20 @@ soft shadows from multiple light sources.
 ## Able to render multiple spheres and calculate their normals
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/27b31637-4c2f-4979-893f-ddddcc0a2f01)
 
-## By using random numbers to create noise I was able to implement anti-aliasing through pixel sampling
+## By using random numbers to create noise I was able to implement anti-aliasing through pixel sampling which smooths out the sphere
+
+Some sources on how to generate random numbers due to the fact that glsl does not support 
+built in random number generation
+
+Some sources that I used to learn:
+
+https://patriciogonzalezvivo.com/
+
+https://thebookofshaders.com/10/
+
+https://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for-opengl-es-2-0/
+
+
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/fcb96ed3-f2fd-436e-8281-937b59cda2fb)
 
 ## instead of normals the color is based on the attenuation value that increases when a ray bounces more

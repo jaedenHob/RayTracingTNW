@@ -10,6 +10,8 @@ const pixelCode = [
     uniform vec3 pixel_delta_u;
     uniform vec3 pixel_delta_v;
     uniform vec3 pixel00_loc;
+    uniform float iteration;
+    uniform float seed;
     `,
 
     `
@@ -51,6 +53,17 @@ const pixelCode = [
     struct interval {
         float min;
         float max;
+    };`,
+
+    `
+    // defining a camera
+    struct Camera {
+        float pixel_samples_scale;
+
+        vec3 center;
+        vec3 pixel_delta_u;
+        vec3 pixel_delta_v;
+        vec3 pixel00_loc;
     };`,
 
     // utility functions
@@ -140,6 +153,50 @@ const pixelCode = [
             }
         }
         return hit_anything;
+    }`,
+
+    `
+    // returns a random float value
+    float rand(vec2 st) {
+        float a = 12.9898;
+        float b = 78.223;
+        float c = 43758.5453;
+        float dt = dot(st.xy, vec2(a,b));
+        float sn = mod(dt, 3.14);
+
+        return fract(sin(sn) * c);
+    }`,
+
+    `
+    // returns a vector of random doubles
+    float random_double(vec2 st) {
+        return rand(st) / (RAND_MAX + 1.0);
+    }`,
+
+    `
+    // returns a vector to a random point on a unit square
+    vec3 sample_square(vec2 st) {
+        return vec3(random_double(st) - 0.5, random_double(st) - 0.5, 0);
+    }`,
+
+    `
+    // calcualte the random ray direction for sampling
+    Ray get_ray(float x, float y) {
+
+        vec3 offset = sample_square(vec2(x, y));
+
+        vec3 pixel_sample = pixel00_loc
+                            + (((x + offset.x) + seed) * pixel_delta_u);
+                            + (((y + offset.y) + seed) * pixel_delta_v);
+
+        pixel_sample = pixel00_loc + ((x + seed) * pixel_delta_u) + ((y + seed) * pixel_delta_v);
+        vec3 ray_origin = camera_center;
+        vec3 ray_direction = pixel_sample - ray_origin;
+
+        // created ray
+        Ray r = Ray(ray_origin, ray_direction);
+
+        return r;
     }`,
 
     `
@@ -242,7 +299,7 @@ const Raytrace = () => {
             in vec2 v_position;
             out vec4 fragColor;
             void main() {
-                fragColor = vec4(v_position, 0.0, 1.0);
+                fragColor = vec4(0., 0., 0.0, 1.0);
             }`,
         }
 
@@ -291,38 +348,48 @@ const Raytrace = () => {
 
             in vec2 v_texcoord;
 
-            // uniform sampler2D u_texture;
-            // uniform  vec3 camera_center;
-            // uniform vec3 pixel_delta_u;
-            // uniform vec3 pixel_delta_v;
-            // uniform vec3 pixel00_loc;
-
             out vec4 fragColor;
 
             ${pixelCode.join("\n//----------------")} // auxillary code
 
             void main() {
                 // old code
-                // vec4 texColor = texture(u_texture, v_texcoord);
-                // float r = texColor.r+0.004; if (r > 1.) r = 0.;
-                // float g = texColor.g+0.004; if (g > 1.) g = 0.;
-                // float b = 0.;//texColor.b+0.01; if (b > 1.) b = 0.;
+                vec4 texColor = texture(u_texture, v_texcoord);
+                float r = texColor.r;
+                float g = texColor.g;
+                float b = texColor.b;
 
                 // fresh code
 
+                vec4 pixel_color;
+                
+                // setting up camera
+                Camera cam = Camera((iteration / iteration + 1.), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
+
                 // setting up world
                 Sphere world[MAX_SPHERE];
-
                 world[0] = Sphere(vec3(0., 0., -1.), 0.5);
                 world[1] = Sphere(vec3(0., -100.5, -1.), 100.0);
 
-                vec3 pixel_center = pixel00_loc + (gl_FragCoord.x * pixel_delta_u) + (gl_FragCoord.y * pixel_delta_v);
-                vec3 ray_direction = pixel_center - camera_center;
-                Ray ray = Ray(camera_center, ray_direction);
+                // ray calculation
+                // vec3 pixel_center = pixel00_loc + (gl_FragCoord.x * pixel_delta_u) + (gl_FragCoord.y * pixel_delta_v);
 
-                vec4 pixel_color = vec4(ray_color(ray, world), 1.0);
+                ////////////////////////////////////////////
+                // vec3 offset = sample_square(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)));
+
+                // vec3 pixel_center = pixel00_loc + ((gl_FragCoord.x + offset.x) * pixel_delta_u) + ((gl_FragCoord.y + offset.y) * pixel_delta_v);
+                ////////////////////////////////////////////////////////
+
+                // vec3 ray_direction = (pixel_center - camera_center);
+                // Ray ray = Ray(camera_center, ray_direction);
+
+                Ray ray = get_ray(float(gl_FragCoord.x), float(gl_FragCoord.y));
+
+                vec3 color = ray_color(ray, world);
+                pixel_color += vec4(color, 1.);
+                // pixel_color = vec4((color.r + texColor.r) / cam.pixel_samples_scale, (color.g + texColor.g) / cam.pixel_samples_scale, (color.b + texColor.b) / cam.pixel_samples_scale, 1.0);
+
                 fragColor = pixel_color;
-                // fragColor = vec4(r, g, b, 1.0);
             }`,
         }
 
@@ -331,34 +398,66 @@ const Raytrace = () => {
         const drawProgramInfo = twgl.createProgramInfo(gl, [drawShaders.vDraw, drawShaders.fDraw]);
         const updateProgramInfo = twgl.createProgramInfo(gl, [updateShaders.vUpdate, updateShaders.fUpdate]);
 
+        let framesCount = 0;
+        let startTime = performance.now();
+        const fpsElem = document.querySelector("#fps");
+
 
         // supporting function
         function render() {
+            // keeping track of fps performance
+            // Increment frames count
+            framesCount++;
+
+            // Calculate elapsed time
+            let elapsedTime = performance.now() - startTime;
+
+            // Check if 1 second has elapsed
+            if (elapsedTime >= 1000) {
+                // Calculate FPS
+                let fps = framesCount / (elapsedTime / 1000);
+
+                // Display FPS
+                fpsElem.textContent = fps.toFixed(2);
+
+                // Reset counters
+                framesCount = 0;
+                startTime = performance.now();
+            }
+
+            // generate seed to give frames variation
+            let seed = (Math.random() * 5).toFixed(2);
+            // console.log(seed);
+
+            // increment the iteration for new frame
             iteration++;
             // console.log(iteration);
+
+            let uniforms = {
+                camera_center: camera_center,
+                pixel_delta_u: pixel_delta_u,
+                pixel_delta_v: pixel_delta_v,
+                pixel00_loc: pixel00_loc,
+                u_texture: fb1.attachments[0],
+                iteration: parseFloat(iteration),
+                seed: seed
+            };
+
+            // console.log(uniforms);
+
             twgl.resizeCanvasToDisplaySize(gl.canvas);
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
             // // drawing frame
             gl.useProgram(drawProgramInfo.program);
             twgl.setBuffersAndAttributes(gl, drawProgramInfo, positionBuffer);
-            twgl.setUniforms(drawProgramInfo, { u_texture: fb1.attachments[0] });
+            twgl.setUniforms(drawProgramInfo, uniforms);
             twgl.bindFramebufferInfo(gl, null);
             twgl.drawBufferInfo(gl, positionBuffer, gl.TRIANGLE_FAN);
 
             // update frame
             gl.useProgram(updateProgramInfo.program);
             twgl.setBuffersAndAttributes(gl, updateProgramInfo, positionBuffer);
-
-            const uniforms = {
-                    camera_center: camera_center,
-                    pixel_delta_u: pixel_delta_u,
-                    pixel_delta_v: pixel_delta_v,
-                    pixel00_loc: pixel00_loc,
-                    u_texture: fb1.attachments[0]
-            };
-
-            // console.log(uniforms);
 
             twgl.setUniforms(updateProgramInfo, uniforms);
             twgl.bindFramebufferInfo(gl, fb2);
@@ -402,12 +501,14 @@ const Raytrace = () => {
 
         // Start rendering loop
         var iteration = 0;
+        var start_time = performance.now();
         renderLoop();
     });
 
     return (
         <>
-            <div>
+            <div className='centered-container'>
+                <div>fps: <span id="fps"></span></div>
                 <canvas ref={canvasRef} width="400" height="225"></canvas>
             </div>
         </>
