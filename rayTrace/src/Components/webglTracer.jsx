@@ -74,6 +74,7 @@ const pixelCode = [
 
     // utility functions
 
+    // interval functions
     `// check interval size
     float interval_size(interval t) {
         return t.max - t.min;
@@ -89,6 +90,7 @@ const pixelCode = [
         return t.min < x && x < t.max;
     }`,
 
+    // ray calculating and collision functions
     `
     // defining if a ray collision is valid or within a set range
     bool hit(Ray r, float ray_tmin, float ray_tmax, hit_record rec) {
@@ -161,6 +163,7 @@ const pixelCode = [
         return hit_anything;
     }`,
 
+    // random number generation functions
     `
     // returns a random float value
     float rand(vec2 st) {
@@ -375,11 +378,11 @@ const Raytrace = () => {
                 vec3 color = ray_color(ray, world);
 
                 // accumulate color
-                color.rgb += tex_color.rgb;
+                // color.rgb += tex_color.rgb;
 
                 // not sure what I had to use this calculation 
                 // but it prevents the render from turning completely white
-                color *= 0.5;
+                // color *= 0.5;
 
                 pixel_color = vec4(mix(color, tex_color.rgb, cam.texture_weight), 1.0);
 
