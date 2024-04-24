@@ -3,6 +3,12 @@ import * as twgl from 'twgl.js';
 
 const pixelCode = [
 
+    `
+    // linearly interpolate between two values
+    vec3 mix(vec3 x, vec3 y, float a) {
+            return x * (1.0 - a) + y * a;
+    }`,
+
     // uniforms
     `
     uniform sampler2D u_texture;
@@ -58,7 +64,7 @@ const pixelCode = [
     `
     // defining a camera
     struct Camera {
-        float pixel_samples_scale;
+        float texture_weight;
 
         vec3 center;
         vec3 pixel_delta_u;
@@ -186,10 +192,9 @@ const pixelCode = [
         vec3 offset = sample_square(vec2(x, y));
 
         vec3 pixel_sample = pixel00_loc
-                            + (((x + offset.x) + seed) * pixel_delta_u);
-                            + (((y + offset.y) + seed) * pixel_delta_v);
+                            + (((x + offset.x) + seed / 2.5) * pixel_delta_u)
+                            + (((y + offset.y) + seed / 2.5) * pixel_delta_v);
 
-        pixel_sample = pixel00_loc + ((x + seed) * pixel_delta_u) + ((y + seed) * pixel_delta_v);
         vec3 ray_origin = camera_center;
         vec3 ray_direction = pixel_sample - ray_origin;
 
@@ -232,7 +237,7 @@ const Raytrace = () => {
         // calculate image height that is at least 1
         var image_height = image_width / aspect_ratio;
 
-        console.log(image_height);
+        // console.log(image_height);
 
         // camera
         const focal_length = 1.0;
@@ -299,7 +304,7 @@ const Raytrace = () => {
             in vec2 v_position;
             out vec4 fragColor;
             void main() {
-                fragColor = vec4(0., 0., 0.0, 1.0);
+                fragColor = vec4(0., 0., 0.0, 0.0);
             }`,
         }
 
@@ -353,41 +358,30 @@ const Raytrace = () => {
             ${pixelCode.join("\n//----------------")} // auxillary code
 
             void main() {
-                // old code
-                vec4 texColor = texture(u_texture, v_texcoord);
-                float r = texColor.r;
-                float g = texColor.g;
-                float b = texColor.b;
-
-                // fresh code
-
+                // vector for resulting color as well as the texture from previous frame
+                vec4 tex_color = texture(u_texture, v_texcoord);
                 vec4 pixel_color;
                 
                 // setting up camera
-                Camera cam = Camera((iteration / iteration + 1.), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
+                Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
 
                 // setting up world
                 Sphere world[MAX_SPHERE];
                 world[0] = Sphere(vec3(0., 0., -1.), 0.5);
                 world[1] = Sphere(vec3(0., -100.5, -1.), 100.0);
 
-                // ray calculation
-                // vec3 pixel_center = pixel00_loc + (gl_FragCoord.x * pixel_delta_u) + (gl_FragCoord.y * pixel_delta_v);
-
-                ////////////////////////////////////////////
-                // vec3 offset = sample_square(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)));
-
-                // vec3 pixel_center = pixel00_loc + ((gl_FragCoord.x + offset.x) * pixel_delta_u) + ((gl_FragCoord.y + offset.y) * pixel_delta_v);
-                ////////////////////////////////////////////////////////
-
-                // vec3 ray_direction = (pixel_center - camera_center);
-                // Ray ray = Ray(camera_center, ray_direction);
-
                 Ray ray = get_ray(float(gl_FragCoord.x), float(gl_FragCoord.y));
 
                 vec3 color = ray_color(ray, world);
-                pixel_color += vec4(color, 1.);
-                // pixel_color = vec4((color.r + texColor.r) / cam.pixel_samples_scale, (color.g + texColor.g) / cam.pixel_samples_scale, (color.b + texColor.b) / cam.pixel_samples_scale, 1.0);
+
+                // accumulate color
+                color.rgb += tex_color.rgb;
+
+                // not sure what I had to use this calculation 
+                // but it prevents the render from turning completely white
+                color *= 0.5;
+
+                pixel_color = vec4(mix(color, tex_color.rgb, cam.texture_weight), 1.0);
 
                 fragColor = pixel_color;
             }`,
