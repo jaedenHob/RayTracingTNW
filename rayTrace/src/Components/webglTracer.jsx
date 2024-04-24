@@ -19,11 +19,11 @@ const pixelCode = [
     #define MAX_SPHERE 2
     #define RAND_MAX 2147483647.0
     #define SAMPLES_PER_PIXEL 100.0
-    #define RAY_BOUNCES 50
+    #define RAY_BOUNCES 5
     `,
 
-    // utility functions and structs for objects
-    
+    // structs to be treated almost as if creating objects
+
     `
     // defining a ray
     struct Ray {
@@ -32,16 +32,159 @@ const pixelCode = [
     };`,
 
     `
+    // defining a hit record
+    struct hit_record {
+        vec3 p;
+        vec3 normal;
+        float t;
+        bool front_face;
+    };`,
+
+    `
+    // defining a Sphere
+    struct Sphere {
+        vec3 center;
+        float radius;
+    };`,
+
+    `// defining interval which is the minimum and maximum value of t
+    struct interval {
+        float min;
+        float max;
+    };`,
+
+    // utility functions
+
+    `// check interval size
+    float interval_size(interval t) {
+        return t.max - t.min;
+    }`,
+
+    `// check if t for a ray is within acceptable range
+    bool interval_contains(float x, interval t) {
+        return t.min <= x && x <= t.max;
+    }`,
+
+    `// check if t for a ray is within acceptable range
+    bool interval_surrounds(float x, interval t) {
+        return t.min < x && x < t.max;
+    }`,
+
+    `
+    // defining if a ray collision is valid or within a set range
+    bool hit(Ray r, float ray_tmin, float ray_tmax, hit_record rec) {
+        return true;
+    }`,
+
+    `
     // defining the specific point on a ray
-    vec3 pointOnRay(Ray ray, float t) {
+    vec3 point_on_ray(Ray ray, float t) {
         return (ray.origin + t * ray.direction);
+    }`,
+
+    `
+    // hitting a sphere (pre changes)
+    // float hit_sphere(in vec3 center, in float radius, in Ray r) {
+    //     vec3 oc = center - r.origin;
+    //     float a = dot(r.direction, r.direction);
+    //     float h = dot(r.direction, oc);
+    //     float c = dot(oc, oc) - radius * radius;
+    //     float discriminant = h * h - a * c;
+
+    //     if (discriminant < 0.0)
+    //         return -1.0;
+    //     else
+    //         return (h - sqrt(discriminant) ) / (a);
+    // }`,
+
+    `
+    // comparison to whether a ray is inside or outside of a sphere
+    void set_face_normal(Ray r, vec3 outward_normal, out hit_record rec) {
+        // Sets the hit record normal vector.
+        // NOTE: the parameter "outward_normal" is assumed to have unit length.
+        
+        rec.front_face = dot(r.direction, outward_normal) < 0.0;
+
+        rec.normal = rec.front_face ? outward_normal : -outward_normal;
+    }`,
+
+    `
+    // hitting a sphere
+    bool hit_sphere(vec3 center,  float radius, Ray r, interval ray_t, out hit_record rec) {
+        vec3 oc = center - r.origin;
+        float a = dot(r.direction, r.direction);
+        float h = dot(r.direction, oc);
+        float c = dot(oc, oc) - radius * radius;
+        float discriminant = h * h - a * c;
+
+        if (discriminant < 0.0)
+            return false;
+
+        float sqrtd = sqrt(discriminant);
+
+        // Find the nearest root that lies in the acceptable range.
+        float root = (h - sqrtd) / a;
+
+        if (!interval_surrounds(root, ray_t)) {
+            root = (h + sqrtd) / a;
+
+            if (!interval_surrounds(root, ray_t))
+                return false;
+        }
+
+        rec.t = root;
+        rec.p = point_on_ray(r, rec.t);
+        vec3 outward_normal = (rec.p - center) / radius;
+
+        set_face_normal(r, outward_normal, rec);
+        // rec.normal = (rec.p - center) / radius;
+        return true;
+    }`,
+
+    `
+    // list of things we can hit (keeps track of things)
+    bool hit_list(Sphere[MAX_SPHERE] spheres, Ray r, interval ray_t, out hit_record rec) {
+        hit_record temp_rec;
+        bool hit_anything = false;
+        float closest_so_far = ray_t.max;
+
+        for (int i = 0; i < MAX_SPHERE; i++) {
+            if (hit_sphere(spheres[i].center, spheres[i].radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+                hit_anything = true;
+                closest_so_far = temp_rec.t;
+                rec = temp_rec;
+            }
+        }
+        return hit_anything;
+    }`,
+
+    `
+    // calcualte the color for pixel based on rays direction
+    vec3 ray_color(in Ray ray, Sphere[MAX_SPHERE] world) {
+        hit_record rec;
+
+        if (hit_list(world, ray, interval(0.0, INFINITY), rec)) {
+            return 0.5 * (rec.normal + vec3(1., 1., 1.));
+        }
+
+        // float t = hit_sphere(vec3(0.0, 0.0, -1.0), 0.5, ray);
+
+        // if (t > 0.0) {
+        //     vec3 N = normalize(point_on_ray(ray, t) - vec3(0, 0, -1));
+        //     return 0.5 * vec3(N.x + 1.0, N.y + 1.0, N.z + 1.0);
+        // }
+
+        vec3 unit_direction = normalize(ray.direction);
+        float a = 0.5 * (unit_direction.y + 1.0);
+
+        return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
     }`,
 ]
 
 const Raytrace = () => {
     // variables local to Raytrace
     let width = 400;
-    let height = 297;
+    let height = 225;
 
     // canvas reference
     const canvasRef = useRef(null);
@@ -50,18 +193,18 @@ const Raytrace = () => {
 
         // rendered image setup
         const aspect_ratio = 16.0 / 9.0;
-        const image_width = 528;
+        const image_width = 400;
 
         // calculate image height that is at least 1
         var image_height = image_width / aspect_ratio;
 
-        // console.log(image_height);
+        console.log(image_height);
 
         // camera
         const focal_length = 1.0;
         const viewport_height = 2.0;
         const viewport_width = viewport_height * (image_width / image_height);
-        const camera_center = [0, 0, 0];
+        const camera_center = [0.0, 0, 0];
 
         // Calculate the vectors across the horizontal and down the vertical viewport edges.
         let viewport_u = [viewport_width, 0, 0];
@@ -182,11 +325,27 @@ const Raytrace = () => {
             ${pixelCode.join("\n//----------------")} // auxillary code
 
             void main() {
+                // old code
                 // vec4 texColor = texture(u_texture, v_texcoord);
                 // float r = texColor.r+0.004; if (r > 1.) r = 0.;
                 // float g = texColor.g+0.004; if (g > 1.) g = 0.;
                 // float b = 0.;//texColor.b+0.01; if (b > 1.) b = 0.;
-                fragColor = vec4(0.,0.,0.,1.0);
+
+                // fresh code
+
+                // setting up world
+                Sphere world[MAX_SPHERE];
+
+                world[0] = Sphere(vec3(0., 0., -1.), 0.5);
+                world[1] = Sphere(vec3(0., -100.5, -1.), 100.0);
+
+                vec3 pixel_center = pixel00_loc + (gl_FragCoord.x * pixel_delta_u) + (gl_FragCoord.y * pixel_delta_v);
+                vec3 ray_direction = pixel_center - camera_center;
+                Ray ray = Ray(camera_center, ray_direction);
+
+                vec4 pixel_color = vec4(ray_color(ray, world), 1.0);
+                fragColor = pixel_color;
+                // fragColor = vec4(r, g, b, 1.0);
             }`,
         }
 
@@ -198,6 +357,8 @@ const Raytrace = () => {
 
         // supporting function
         function render() {
+            iteration++;
+            // console.log(iteration);
             twgl.resizeCanvasToDisplaySize(gl.canvas);
             gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -263,13 +424,14 @@ const Raytrace = () => {
         };
 
         // Start rendering loop
+        var iteration = 0;
         renderLoop();
     });
 
     return (
         <>
             <div>
-                <canvas ref={canvasRef} width="400" height="297"></canvas>
+                <canvas ref={canvasRef} width="400" height="225"></canvas>
             </div>
         </>
     );
