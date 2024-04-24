@@ -27,7 +27,7 @@ const pixelCode = [
     #define MAX_SPHERE 2
     #define RAND_MAX 2147483647.0
     #define SAMPLES_PER_PIXEL 100.0
-    #define RAY_BOUNCES 5
+    #define MAX_RAY_BOUNCES 5
     `,
 
     // structs to be treated almost as if creating objects
@@ -163,14 +163,14 @@ const pixelCode = [
         return hit_anything;
     }`,
 
-    // random number generation functions
+    // random number generation functions and random sphere calculations
     `
     // returns a random float value
     float rand(vec2 st) {
         float a = 12.9898;
         float b = 78.223;
         float c = 43758.5453;
-        float dt = dot(st.xy, vec2(a,b));
+        float dt = dot(st, vec2(a,b));
         float sn = mod(dt, 3.14);
 
         return fract(sin(sn) * c);
@@ -179,7 +179,27 @@ const pixelCode = [
     `
     // returns a vector of random doubles
     float random_double(vec2 st) {
-        return rand(st) / (RAND_MAX + 1.0);
+        return rand(st);
+    }`,
+
+    `
+    // returns a vector of random doubles within a range
+    float random_double_interval(vec2 st, float min, float max) {
+        return min + (max - min) * random_double(st);
+    }`,
+
+    `
+    // returns a vector of random doubles
+    vec3 random_vector(vec2 st) {
+        return vec3(random_double(st), random_double(st.xx), random_double(st.yx));
+    }`,
+
+    `
+    // returns a vector of random doubles in a range
+    vec3 random_vector_interval(vec2 st, float min, float max) {
+        return vec3(random_double_interval(st, min, max), 
+                    random_double_interval(st, min, max), 
+                    random_double_interval(st, min, max));
     }`,
 
     `
@@ -189,14 +209,48 @@ const pixelCode = [
     }`,
 
     `
+    // returns a vector to a random point on a unit square
+    vec3 random_in_unit_sphere(vec2 st) {
+        float vari = 0.0;
+
+        while(true) {
+            st += vari;
+            vec3 p = random_vector_interval(st, -1.0, 1.0);
+            
+            if (dot(p, p) < 1.) {
+                return p;
+            }
+        }
+    }`,
+
+    `
+    // returns a unit vector on unit vector sphere
+    vec3 random_unit_vector(vec2 st) {
+        return normalize(random_in_unit_sphere(st));
+    }`,
+
+    `
+    // check if vector is in the right hemisphere
+    vec3 random_on_hemisphere(vec2 st, vec3 normal) {
+        vec3 on_unit_sphere = random_unit_vector(st);
+
+        if (dot(on_unit_sphere, normal) > 0.0) // in the same hemisphere
+            return on_unit_sphere;
+        else
+            return -on_unit_sphere;
+    }`,
+
+    // ray calculations and colors
+
+    `
     // calcualte the random ray direction for sampling
     Ray get_ray(float x, float y) {
 
-        vec3 offset = sample_square(vec2(x, y));
+        vec3 offset = sample_square(vec2(x, y)) + seed;
 
         vec3 pixel_sample = pixel00_loc
-                            + (((x + offset.x) + seed / 2.5) * pixel_delta_u)
-                            + (((y + offset.y) + seed / 2.5) * pixel_delta_v);
+                            + ((x + offset.x) * pixel_delta_u)
+                            + ((y + offset.y) * pixel_delta_v);
 
         vec3 ray_origin = camera_center;
         vec3 ray_direction = pixel_sample - ray_origin;
@@ -209,17 +263,48 @@ const pixelCode = [
 
     `
     // calcualte the color for pixel based on rays direction
-    vec3 ray_color(in Ray ray, Sphere[MAX_SPHERE] world) {
+    vec3 ray_color(in Ray ray, Sphere[MAX_SPHERE] world, vec2 st) {
         hit_record rec;
 
-        if (hit_list(world, ray, interval(0.0, INFINITY), rec)) {
-            return 0.5 * (rec.normal + vec3(1., 1., 1.));
+        int bounce = 0;
+
+        Ray curr = ray;
+
+        vec3 attenuation = vec3(1.0);
+
+        while (bounce <= MAX_RAY_BOUNCES) {
+
+            if (hit_list(world, curr, interval(0.0, INFINITY), rec)) {
+
+                // new direction for the new ray that bounces off a surface
+                vec3 new_direction = random_on_hemisphere(st, rec.normal);
+
+                // create new ray from point of collision (will be used in the next loop if bounce < Max_bounce)
+                curr = Ray(rec.p, new_direction);
+                
+                // increment bounce since we hit something
+                bounce++;
+
+                attenuation *= 0.5;
+            } else { // draw background since ray hit nothing (no bounce.... sadge)
+                
+                vec3 unit_direction = normalize(curr.direction);
+                float a = 0.5 * (unit_direction.y + 1.0);
+                vec3 color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+
+                return (color * attenuation);
+
+            }   
         }
 
-        vec3 unit_direction = normalize(ray.direction);
-        float a = 0.5 * (unit_direction.y + 1.0);
+        // if (hit_list(world, ray, interval(0.0, INFINITY), rec)) {
+        //     return 0.5 * (rec.normal + vec3(1., 1., 1.));
+        // }
 
-        return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+        // vec3 unit_direction = normalize(ray.direction);
+        // float a = 0.5 * (unit_direction.y + 1.0);
+
+        // return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
     }`,
 ]
 
@@ -364,6 +449,9 @@ const Raytrace = () => {
                 // vector for resulting color as well as the texture from previous frame
                 vec4 tex_color = texture(u_texture, v_texcoord);
                 vec4 pixel_color;
+
+                // postion on frament used as seeding for rnadom numbers
+                vec2 st = vec2(float(gl_FragCoord.x), float(gl_FragCoord.y));
                 
                 // setting up camera
                 Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
@@ -375,14 +463,15 @@ const Raytrace = () => {
 
                 Ray ray = get_ray(float(gl_FragCoord.x), float(gl_FragCoord.y));
 
-                vec3 color = ray_color(ray, world);
+                vec3 color = ray_color(ray, world, st);
 
+                /*
                 // accumulate color
-                // color.rgb += tex_color.rgb;
-
+                    color.rgb += tex_color.rgb;
                 // not sure what I had to use this calculation 
                 // but it prevents the render from turning completely white
-                // color *= 0.5;
+                    color *= 0.5;
+                */
 
                 pixel_color = vec4(mix(color, tex_color.rgb, cam.texture_weight), 1.0);
 
@@ -423,8 +512,8 @@ const Raytrace = () => {
             }
 
             // generate seed to give frames variation
-            let seed = (Math.random() * 5).toFixed(2);
-            // console.log(seed);
+            let seed = (Math.random() * 2).toFixed(2);
+            // console.log(seed / 2.5);
 
             // increment the iteration for new frame
             iteration++;
