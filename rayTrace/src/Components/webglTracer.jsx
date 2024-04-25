@@ -271,7 +271,7 @@ const pixelCode = [
 
         Ray curr = ray;
 
-        vec3 attenuation = vec3(1.0);
+        float attenuation = 1.;
 
         while (bounce <= MAX_RAY_BOUNCES) {
 
