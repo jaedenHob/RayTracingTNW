@@ -245,13 +245,13 @@ const pixelCode = [
 
     `
     // calcualte the random ray direction for sampling
-    Ray get_ray(float x, float y) {
+    Ray get_ray(vec2 pos, vec2 st) {
 
-        vec3 offset = sample_square(vec2(x, y)) + seed;
+        vec3 offset = sample_square(st);
 
         vec3 pixel_sample = pixel00_loc
-                            + ((x + offset.x) * pixel_delta_u)
-                            + ((y + offset.y) * pixel_delta_v);
+                            + ((pos.x + offset.x) * pixel_delta_u)
+                            + ((pos.y + offset.y) * pixel_delta_v);
 
         vec3 ray_origin = camera_center;
         vec3 ray_direction = pixel_sample - ray_origin;
@@ -452,7 +452,7 @@ const Raytrace = () => {
                 vec4 pixel_color;
 
                 // postion on frament used as seeding for rnadom numbers
-                vec2 st = vec2(float(gl_FragCoord.x), float(gl_FragCoord.y));
+                vec2 st = vec2(float(gl_FragCoord.x + seed), float(gl_FragCoord.y + seed));
                 
                 // setting up camera
                 Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
@@ -462,7 +462,7 @@ const Raytrace = () => {
                 world[0] = Sphere(vec3(0., 0., -1.), 0.5);
                 world[1] = Sphere(vec3(0., -100.5, -1.), 100.0);
 
-                Ray ray = get_ray(float(gl_FragCoord.x), float(gl_FragCoord.y));
+                Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
 
                 vec3 color = ray_color(ray, world, st);
 
@@ -513,7 +513,7 @@ const Raytrace = () => {
             }
 
             // generate seed to give frames variation
-            let seed = (Math.random() * 2).toFixed(2);
+            let seed = (Math.random() * 0.05).toFixed(2);
             // console.log(seed / 2.5);
 
             // increment the iteration for new frame
