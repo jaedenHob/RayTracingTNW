@@ -38,10 +38,14 @@ https://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for
 
 A small thing to note is I have made a transition from useing traditional sampling to a progressiver rendering technique to save on performance due to the limitations of my computers gpu.
 
-The image below is the traditional approach that takes a long time to render and still has issues with shadow acne and noticable noise. The smaller image with gamma corrected color is progressively rendered and has shadow acne removed and is quite accurate the tautorial.
+The image below is the traditional approach that takes a long time to render and still has issues with shadow acne and noticable noise. The smaller image with gamma corrected color is progressively rendered and has shadow acne removed and is quite accurate to the gbook example.
+
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/98f118b5-5845-432e-96d6-3c765f6bd1a9)
 
+
 ![alt text](image.png)
+
+above is accurate lambertian sphere with reflections of rays
 
 Above is the raytracer itself (In progress).
 
