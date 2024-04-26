@@ -202,8 +202,8 @@ const pixelCode = [
     // returns a vector of random doubles in a range
     vec3 random_vector_interval(vec2 st, float min, float max) {
         return vec3(random_double_interval(st, min, max), 
-                    random_double_interval(st, min, max), 
-                    random_double_interval(st, min, max));
+                    random_double_interval(vec2(st.y + 2., st.x + 4.), min, max), 
+                    random_double_interval(st.yx, min, max));
     }`,
 
     `
@@ -215,12 +215,18 @@ const pixelCode = [
     `
     // returns a vector to a random point on a unit square
     vec3 random_in_unit_sphere(vec2 st) {
+        float i = 1.0;
+        vec2 tmp = st;
+
         while(true) {
-            vec3 p = random_vector_interval(st, -1.0, 1.0);
+            vec3 p = random_vector_interval(tmp, -1.0, 1.0);
             
             if (dot(p, p) < 1.) {
                 return p;
             }
+
+            tmp = vec2(tmp.x + i, tmp.y + i);
+            i += seed;
         }
     }`,
 
@@ -513,7 +519,7 @@ const Raytrace = () => {
             }
 
             // generate seed to give frames variation
-            let seed = (Math.random() * 0.05).toFixed(2);
+            let seed = (Math.random() * 1000.).toFixed(2);
             // console.log(seed / 2.5);
 
             // increment the iteration for new frame
