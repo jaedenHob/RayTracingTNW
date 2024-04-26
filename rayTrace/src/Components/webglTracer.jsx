@@ -209,7 +209,7 @@ const pixelCode = [
     `
     // returns a vector to a random point on a unit square
     vec3 sample_square(vec2 st) {
-        return vec3(random_double(st) - seed / 7.5, random_double(st) - seed / 7.5, 0);
+        return vec3(random_double(st) - seed / 2., random_double(st) - seed / 2., 0);
     }`,
 
     `
@@ -284,7 +284,7 @@ const pixelCode = [
             if (hit_list(world, curr, interval(0.001, INFINITY), rec)) {
 
                 // new direction for the new ray that bounces off a surface
-                vec3 new_direction = random_on_hemisphere(st, rec.normal);
+                vec3 new_direction = rec.normal + random_unit_vector(st);
 
                 // create new ray from point of collision (will be used in the next loop if bounce < Max_bounce)
                 curr = Ray(rec.p, new_direction);
@@ -523,7 +523,7 @@ const Raytrace = () => {
             }
 
             // generate seed to give frames variation
-            let seed = (Math.random() * 10.).toFixed(2);
+            let seed = (Math.random() * 1.).toFixed(2);
             // console.log(seed / 2.5);
 
             // increment the iteration for new frame
