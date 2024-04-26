@@ -28,9 +28,24 @@ const pixelCode = [
     #define RAND_MAX 2147483647.0
     #define SAMPLES_PER_PIXEL 100.0
     #define MAX_RAY_BOUNCES 10
+
+    // values we will use when determining matrial type
+    #define LAMBERTIAN 0
+    #define METAL 1
+    #define DIELECTRIC 2
     `,
 
     // structs to be treated almost as if creating objects
+
+    `
+    // defining specific material and its characteristics
+    struct Material {
+        int type;
+
+        vec3 albedo;
+
+        float fuzzyness;
+    };`,
 
     `
     // defining a ray
@@ -44,15 +59,22 @@ const pixelCode = [
     struct hit_record {
         vec3 p;
         vec3 normal;
+
         float t;
+
         bool front_face;
+
+        Material mat;
     };`,
 
     `
     // defining a Sphere
     struct Sphere {
         vec3 center;
+
         float radius;
+
+        Material mat;
     };`,
 
     `// defining interval which is the minimum and maximum value of t
@@ -125,11 +147,11 @@ const pixelCode = [
 
     `
     // hitting a sphere
-    bool hit_sphere(vec3 center,  float radius, Ray r, interval ray_t, out hit_record rec) {
-        vec3 oc = center - r.origin;
+    bool hit_sphere(Sphere orb, Ray r, interval ray_t, out hit_record rec) {
+        vec3 oc = orb.center - r.origin;
         float a = dot(r.direction, r.direction);
         float h = dot(r.direction, oc);
-        float c = dot(oc, oc) - radius * radius;
+        float c = dot(oc, oc) - orb.radius * orb.radius;
         float discriminant = h * h - a * c;
 
         if (discriminant < 0.0)
@@ -149,9 +171,11 @@ const pixelCode = [
 
         rec.t = root;
         rec.p = point_on_ray(r, rec.t);
-        vec3 outward_normal = (rec.p - center) / radius;
+        vec3 outward_normal = (rec.p - orb.center) / orb.radius;
 
         set_face_normal(r, outward_normal, rec);
+
+        rec.mat = orb.mat;
         return true;
     }`,
 
@@ -163,7 +187,7 @@ const pixelCode = [
         float closest_so_far = ray_t.max;
 
         for (int i = 0; i < MAX_SPHERE; i++) {
-            if (hit_sphere(spheres[i].center, spheres[i].radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+            if (hit_sphere(spheres[i], r, interval(ray_t.min, closest_so_far), temp_rec)) {
                 hit_anything = true;
                 closest_so_far = temp_rec.t;
                 rec = temp_rec;
@@ -465,10 +489,12 @@ const Raytrace = () => {
                 // setting up camera
                 Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
 
+                Material test = Material(0, vec3(1.), 0.);
+                
                 // setting up world
                 Sphere world[MAX_SPHERE];
-                world[0] = Sphere(vec3(0., 0., -1.), 0.5);
-                world[1] = Sphere(vec3(0., -100.5, -1.), 100.0);
+                world[0] = Sphere(vec3(0., 0., -1.), 0.5, test);
+                world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, test);
 
                 // old code for just interpolating colors. no traditional sampling
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
