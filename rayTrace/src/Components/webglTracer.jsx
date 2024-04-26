@@ -2,11 +2,31 @@ import React, { useRef, useEffect } from 'react';
 import * as twgl from 'twgl.js';
 
 const pixelCode = [
-
+    // auxilary functions
     `
     // linearly interpolate between two values
     vec3 mix(vec3 x, vec3 y, float a) {
             return x * (1.0 - a) + y * a;
+    }`,
+
+    // `
+    // // check if all of a vector's components are near zero
+    // bool near_zero(vec3 a) {
+    //     // returns true if close to zero in all dimensions
+    //     float s = 0.00000001;
+
+    //     abs(a.x) < s
+
+    //     if ((abs(a.x) < s) && (abs(a.y) < s) && (abs(a.z) < s))
+    //         return true;
+    //     else
+    //         return false;
+    // }`,
+
+    `
+    // computing a reflected vector
+    vec3 reflection(vec3 v, vec3 n) {
+        return v - 2. * dot(v, n) * n;
     }`,
 
     // uniforms
