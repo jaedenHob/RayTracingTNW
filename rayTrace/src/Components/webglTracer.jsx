@@ -74,6 +74,15 @@ const pixelCode = [
 
     // utility functions
 
+    // gamma correction function
+    `
+    float linear_to_gamma(float linear_component) {
+        if (linear_component > 0.0)
+            return sqrt(linear_component);
+
+        return 0.0;
+    }`,
+
     // interval functions
     `// check interval size
     float interval_size(interval t) {
@@ -303,15 +312,6 @@ const pixelCode = [
 
             }   
         }
-
-        // if (hit_list(world, ray, interval(0.0, INFINITY), rec)) {
-        //     return 0.5 * (rec.normal + vec3(1., 1., 1.));
-        // }
-
-        // vec3 unit_direction = normalize(ray.direction);
-        // float a = 0.5 * (unit_direction.y + 1.0);
-
-        // return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
     }`,
 ]
 
@@ -483,6 +483,14 @@ const Raytrace = () => {
                 //     color += ray_color(ray, world, st);
                 // }
                 // color *= (1. / sampling);
+
+                // applying linear to gamma correction
+                float r = linear_to_gamma(color.x);
+                float g = linear_to_gamma(color.y);
+                float b = linear_to_gamma(color.z);
+
+                // build color up again with the transformed rgb values
+                color = vec3(r, g, b);
 
                 pixel_color = vec4(mix(color, tex_color.rgb, cam.texture_weight), 1.0);
 
