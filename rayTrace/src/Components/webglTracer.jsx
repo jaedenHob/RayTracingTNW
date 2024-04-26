@@ -474,16 +474,6 @@ const Raytrace = () => {
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
                 color = ray_color(ray, world, st);
 
-                // // very weak anti aliasing with progressive rendering. 
-                // // however the effect this gives is that the sphere actually seems
-                // // more jagged and rough. no need including in here
-                // float sampling;
-                // for (sampling = 0.0; sampling < 5.0; sampling++) {
-                //     Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), vec2(st.x + sampling, st.y + sampling));
-                //     color += ray_color(ray, world, st);
-                // }
-                // color *= (1. / sampling);
-
                 // applying linear to gamma correction
                 float r = linear_to_gamma(color.x);
                 float g = linear_to_gamma(color.y);
