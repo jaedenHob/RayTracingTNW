@@ -202,14 +202,14 @@ const pixelCode = [
     // returns a vector of random doubles in a range
     vec3 random_vector_interval(vec2 st, float min, float max) {
         return vec3(random_double_interval(st, min, max), 
-                    random_double_interval(vec2(st.y + 2., st.x + 4.), min, max), 
+                    random_double_interval(vec2(st.y + 2., st.x * 4.), min, max), 
                     random_double_interval(st.yx, min, max));
     }`,
 
     `
     // returns a vector to a random point on a unit square
     vec3 sample_square(vec2 st) {
-        return vec3(random_double(st) - 0.5, random_double(st) - 0.5, 0);
+        return vec3(random_double(st) - seed / 7.5, random_double(st) - seed / 7.5, 0);
     }`,
 
     `
@@ -454,6 +454,8 @@ const Raytrace = () => {
 
             void main() {
                 // vector for resulting color as well as the texture from previous frame
+                vec3 color;
+
                 vec4 tex_color = texture(u_texture, v_texcoord);
                 vec4 pixel_color;
 
@@ -468,9 +470,19 @@ const Raytrace = () => {
                 world[0] = Sphere(vec3(0., 0., -1.), 0.5);
                 world[1] = Sphere(vec3(0., -100.5, -1.), 100.0);
 
+                // old code for just interpolating colors. no traditional sampling
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
+                color = ray_color(ray, world, st);
 
-                vec3 color = ray_color(ray, world, st);
+                // // very weak anti aliasing so even though render converges. 
+                // // however the effect this gives instead is that the sphere actully seems
+                // // more jagged and rough
+                // float sampling;
+                // for (sampling = 0.0; sampling < 5.0; sampling++) {
+                //     Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), vec2(st.x + sampling, st.y + sampling));
+                //     color += ray_color(ray, world, st);
+                // }
+                // color *= (1. / sampling);
 
                 pixel_color = vec4(mix(color, tex_color.rgb, cam.texture_weight), 1.0);
 
@@ -511,7 +523,7 @@ const Raytrace = () => {
             }
 
             // generate seed to give frames variation
-            let seed = (Math.random() * 1000.).toFixed(2);
+            let seed = (Math.random() * 10.).toFixed(2);
             // console.log(seed / 2.5);
 
             // increment the iteration for new frame
