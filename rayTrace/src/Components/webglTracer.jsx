@@ -27,7 +27,7 @@ const pixelCode = [
     #define MAX_SPHERE 2
     #define RAND_MAX 2147483647.0
     #define SAMPLES_PER_PIXEL 100.0
-    #define MAX_RAY_BOUNCES 5
+    #define MAX_RAY_BOUNCES 10
     `,
 
     // structs to be treated almost as if creating objects
@@ -281,7 +281,7 @@ const pixelCode = [
 
         while (bounce <= MAX_RAY_BOUNCES) {
 
-            if (hit_list(world, curr, interval(0.0, INFINITY), rec)) {
+            if (hit_list(world, curr, interval(0.001, INFINITY), rec)) {
 
                 // new direction for the new ray that bounces off a surface
                 vec3 new_direction = random_on_hemisphere(st, rec.normal);
@@ -474,9 +474,9 @@ const Raytrace = () => {
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
                 color = ray_color(ray, world, st);
 
-                // // very weak anti aliasing so even though render converges. 
-                // // however the effect this gives instead is that the sphere actully seems
-                // // more jagged and rough
+                // // very weak anti aliasing with progressive rendering. 
+                // // however the effect this gives is that the sphere actually seems
+                // // more jagged and rough. no need including in here
                 // float sampling;
                 // for (sampling = 0.0; sampling < 5.0; sampling++) {
                 //     Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), vec2(st.x + sampling, st.y + sampling));
