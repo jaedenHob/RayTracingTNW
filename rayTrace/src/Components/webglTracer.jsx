@@ -472,14 +472,6 @@ const Raytrace = () => {
 
                 vec3 color = ray_color(ray, world, st);
 
-                /*
-                // accumulate color
-                    color.rgb += tex_color.rgb;
-                // not sure what I had to use this calculation 
-                // but it prevents the render from turning completely white
-                    color *= 0.5;
-                */
-
                 pixel_color = vec4(mix(color, tex_color.rgb, cam.texture_weight), 1.0);
 
                 fragColor = pixel_color;
