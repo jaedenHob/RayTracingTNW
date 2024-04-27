@@ -325,20 +325,37 @@ const pixelCode = [
         hit_record rec;
 
         int bounce = 0;
+        
+        Ray curr = ray; // tracking current ray calculations
+        Ray scattered; // newly created scattered ray after bounce
 
-        Ray curr = ray;
+        vec3 attenuation = vec3(1.);
 
-        float attenuation = 1.;
+        vec3 scatter_direction;
 
         while (bounce <= MAX_RAY_BOUNCES) {
 
             if (hit_list(world, curr, interval(0.001, INFINITY), rec)) {
 
+                // need a set of switch or if statements based on sphere material type
+                if (rec.mat.type == LAMBERTIAN) { // lambertian light scatter
+
+                    // new direction for the new ray that bounces off a surface
+                    scatter_direction = rec.normal + random_unit_vector(st);
+
+                    scattered = Ray(rec.p, scatter_direction);
+
+                    attenuation = rec.mat.albedo;
+                }
+                // else if () { // metal light reflectance
+
+                // }
+
                 // new direction for the new ray that bounces off a surface
-                vec3 new_direction = rec.normal + random_unit_vector(st);
+                scatter_direction = rec.normal + random_unit_vector(st);
 
                 // create new ray from point of collision (will be used in the next loop if bounce < Max_bounce)
-                curr = Ray(rec.p, new_direction);
+                curr = Ray(rec.p, scatter_direction);
                 
                 // increment bounce since we hit something
                 bounce++;
@@ -507,7 +524,7 @@ const Raytrace = () => {
                 // setting up camera
                 Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
 
-                Material test = Material(0, vec3(1.), 0.);
+                Material test = Material(0, vec3(0.7), 0.);
                 
                 // setting up world
                 Sphere world[MAX_SPHERE];
