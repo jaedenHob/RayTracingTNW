@@ -9,19 +9,17 @@ const pixelCode = [
             return x * (1.0 - a) + y * a;
     }`,
 
-    // `
-    // // check if all of a vector's components are near zero
-    // bool near_zero(vec3 a) {
-    //     // returns true if close to zero in all dimensions
-    //     float s = 0.00000001;
+    `
+    // check if all of a vector's components are near zero
+    bool near_zero(vec3 a) {
+        // returns true if close to zero in all dimensions
+        float s = 0.00000001;
 
-    //     abs(a.x) < s
-
-    //     if ((abs(a.x) < s) && (abs(a.y) < s) && (abs(a.z) < s))
-    //         return true;
-    //     else
-    //         return false;
-    // }`,
+        if ((abs(a.x) < s) && (abs(a.y) < s) && (abs(a.z) < s))
+            return true;
+        else
+            return false;
+    }`,
 
     `
     // computing a reflected vector
