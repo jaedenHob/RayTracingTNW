@@ -340,14 +340,20 @@ const pixelCode = [
 
     `
     // metal scatter function
-    bool metalic_scatter(Ray ray_in, out vec3 scatter_direction, out Ray scattered, out vec3 attenuation, hit_record rec) {
-        // new direction for the new ray that bounces off a surface
-        scatter_direction = reflection(ray_in.direction, rec.normal);
+    bool metalic_scatter(Ray ray_in, out vec3 scatter_direction, out Ray scattered, out vec3 attenuation, hit_record rec, vec2 st) {
+        // local variables
+        vec3 reflected;
+
+        // new direction for the new ray that bounces off a surface (reflected)
+        reflected = reflection(ray_in.direction, rec.normal);
+
+        scatter_direction = normalize(reflected) + (rec.mat.fuzzyness * random_unit_vector(st));
 
         scattered = Ray(rec.p, scatter_direction);
 
         attenuation *= rec.mat.albedo;
-        return true;
+
+        return (dot(scatter_direction, rec.normal) > 0.0);
     }`,
 
     `
@@ -383,7 +389,7 @@ const pixelCode = [
                 }
                 else if (rec.mat.type == METAL) { // metal light reflectance
 
-                    if (metalic_scatter(curr, scatter_direction, scattered, attenuation, rec)) {
+                    if (metalic_scatter(curr, scatter_direction, scattered, attenuation, rec, st)) {
                         continue_bouncing = true;
                     }
                 } 
@@ -571,8 +577,8 @@ const Raytrace = () => {
                 // material type labels (color values)
                 Material ground = Material(0, vec3(0.8, 0.8, 0.0), 0.);
                 Material center = Material(0, vec3(0.1, 0.2, 0.5), 0.);
-                Material left = Material(1, vec3(0.8, 0.8, 0.8), 0.);
-                Material right = Material(1, vec3(0.8, 0.6, 0.2), 0.);
+                Material left = Material(1, vec3(0.8, 0.8, 0.8), 0.3);
+                Material right = Material(1, vec3(0.8, 0.6, 0.2), 1.);
                 
                 // setting up world
                 Sphere world[MAX_SPHERE];
