@@ -550,7 +550,7 @@ const Raytrace = () => {
     useEffect(() => {
         const vfov = 90;
 
-        const lookfrom = [0.0, 0.0, 0.0]; // point camera is looking from
+        const lookfrom = [0.0, 0.0, -2.0]; // point camera is looking from
         const lookat = [0.0, 0.0, -1.0]; // point that camera is looking at
         const vup = [0.0, -1.0, 0.0]; // camera up direction
 
@@ -726,11 +726,11 @@ const Raytrace = () => {
                 world[1] = Sphere(vec3(R, 0., -1.0), R, right_purple);
 
                 // world generation
-                world[0] = Sphere(vec3(0., 0., -1.2), 0.5, center); // center sphere
+                world[0] = Sphere(vec3(0., 0., -0.8), 0.5, center); // center sphere
                 world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, ground); // ground
-                world[2] = Sphere(vec3(1.0, 0., -1.0), 0.5, left); // left sphere
-                world[3] = Sphere(vec3(1.0, 0., -1.0), 0.4, bubble); // left sphere (bubble)
-                world[4] = Sphere(vec3(-1.0, 0.0, -1.0), 0.5, right); // right sphere
+                world[2] = Sphere(vec3(-1., 0., -1.), 0.5, left); // left sphere
+                world[3] = Sphere(vec3(-1., 0., -1.), 0.4, bubble); // left sphere (bubble)
+                world[4] = Sphere(vec3(1., 0.0, -1.), 0.5, right); // right sphere
 
                 // old code for just interpolating colors. no traditional sampling
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
