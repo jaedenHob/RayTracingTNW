@@ -319,6 +319,24 @@ const pixelCode = [
         return r;
     }`,
 
+    // functions for calculating light reflections from different sphere material types
+    `
+    // lambertian scatter
+    bool lambertian_scatter(out vec3 scatter_direction, out Ray scattered, out vec3 attenuation, hit_record rec, vec2 st) {
+        // new direction for the new ray that bounces off a surface
+        scatter_direction = rec.normal + random_unit_vector(st);
+
+        // avoid any degenerate scatter
+        if (near_zero(scatter_direction)) {
+            scatter_direction = rec.normal;
+        }
+
+        scattered = Ray(rec.p, scatter_direction);
+
+        attenuation *= rec.mat.albedo;
+        return true;
+    }`,
+
     `
     // calcualte the color for pixel based on rays direction
     vec3 ray_color(in Ray ray, Sphere[MAX_SPHERE] world, vec2 st) {
@@ -330,42 +348,54 @@ const pixelCode = [
         Ray scattered; // newly created scattered ray after bounce
 
         vec3 attenuation = vec3(1.);
-
         vec3 scatter_direction;
+        vec3 color;
 
-        while (bounce <= MAX_RAY_BOUNCES) {
+        // terminates loop when true
+        bool stop = false;
+        bool continue_bouncing;
+
+        while (bounce <= MAX_RAY_BOUNCES && stop == false) {
+
+            continue_bouncing = false;
 
             if (hit_list(world, curr, interval(0.001, INFINITY), rec)) {
 
                 // need a set of switch or if statements based on sphere material type
                 if (rec.mat.type == LAMBERTIAN) { // lambertian light scatter
 
-                    // new direction for the new ray that bounces off a surface
-                    scatter_direction = rec.normal + random_unit_vector(st);
-
-                    scattered = Ray(rec.p, scatter_direction);
-
-                    attenuation = rec.mat.albedo;
+                    if (lambertian_scatter(scatter_direction, scattered, attenuation, rec, st)) {
+                        continue_bouncing = true;
+                    } 
                 }
                 // else if () { // metal light reflectance
 
-                // }
+                // } 
+                else { // default to lambertian light bounce if there is no matching material 
+                    
+                    if (lambertian_scatter(scatter_direction, scattered, attenuation, rec, st)) {
+                        continue_bouncing = true;
+                    }
+                }
 
-                // new direction for the new ray that bounces off a surface
-                scatter_direction = rec.normal + random_unit_vector(st);
-
-                // create new ray from point of collision (will be used in the next loop if bounce < Max_bounce)
-                curr = Ray(rec.p, scatter_direction);
                 
-                // increment bounce since we hit something
-                bounce++;
+                if (continue_bouncing) { // if we can continue boucing let variables change
+                    // create new ray from point of collision (will be used in the next loop if bounce < Max_bounce)
+                    curr = Ray(rec.p, scatter_direction);
 
-                attenuation *= 0.5;
+                    // increment bounce since we hit something
+                    bounce++;
+                } 
+                else { // cannot continue then flag to stop and return the color black
+                    color = vec3(0.);
+                    stop = true;
+                }
+
             } else { // draw background since ray hit nothing (no bounce.... sadge)
                 
                 vec3 unit_direction = normalize(curr.direction);
                 float a = 0.5 * (unit_direction.y + 1.0);
-                vec3 color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+                color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
 
                 return (color * attenuation);
 
