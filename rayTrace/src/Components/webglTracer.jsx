@@ -18,7 +18,7 @@ const pixelCode = [
     // constants
     #define PI 3.1415926538
     #define INFINITY 1.0 / 0.00000000001
-    #define MAX_SPHERE 4
+    #define MAX_SPHERE 5
     #define RAND_MAX 2147483647.0
     #define SAMPLES_PER_PIXEL 100.0
     #define MAX_RAY_BOUNCES 10
@@ -48,6 +48,7 @@ const pixelCode = [
             return false;
     }`,
 
+    // functions for computing reflecting and refractions
     `
     // computing a reflected vector
     vec3 reflection(vec3 v, vec3 n) {
@@ -62,6 +63,15 @@ const pixelCode = [
         vec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
         vec3 r_out_parallel = -sqrt(abs(1.0 - dot(r_out_perp, r_out_perp))) * n;
         return r_out_perp + r_out_parallel;
+    }`,
+
+    `
+    // function for reflectance by using shlicks approximation of reflectance
+    float reflectance(float cosine, float refraction_index) {
+        float r0 = (1. - refraction_index) / (1. + refraction_index);
+        r0 = r0 * r0;
+
+        return r0 + (1. - r0) * pow((1. - cosine), 500.);
     }`,
 
     // structs to be treated almost as if creating objects
@@ -365,7 +375,7 @@ const pixelCode = [
 
     `
     // dielectric scatter function
-    bool dielectric_scatter(Ray ray_in, out vec3 scatter_direction, out vec3 attenuation, hit_record rec) {
+    bool dielectric_scatter(Ray ray_in, out vec3 scatter_direction, out vec3 attenuation, hit_record rec, vec2 st) {
         attenuation = vec3(1., 1., 1.);
 
         float ri = rec.front_face ? (1.0 / rec.mat.refraction_index) : rec.mat.refraction_index;
@@ -384,7 +394,7 @@ const pixelCode = [
             cannot_refract = false; // refract
         }
 
-        if (cannot_refract) {
+        if (cannot_refract || reflectance(cos_theta, ri) > random_double(st)) {
             direction = reflection(unit_direction, rec.normal);
         } else {
             direction = refracting(unit_direction, rec.normal, ri);
@@ -434,7 +444,7 @@ const pixelCode = [
                 } 
                 else if (rec.mat.type == DIELECTRIC) { // metal light reflectance
 
-                    if (dielectric_scatter(curr, scatter_direction, attenuation, rec)) {
+                    if (dielectric_scatter(curr, scatter_direction, attenuation, rec, st)) {
                         continue_bouncing = true;
                     }
                 }
@@ -620,7 +630,8 @@ const Raytrace = () => {
                 // material type labels (color values)
                 Material ground = Material(0, vec3(0.8, 0.8, 0.0), 0., 0.);
                 Material center = Material(0, vec3(0.1, 0.2, 0.5), 0., 0.);
-                Material left = Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.00 / 1.33);
+                Material left = Material(2, vec3(0., 0., 0.), 0.3, 1.50);
+                Material bubble = Material(2, vec3(0., 0., 0.), 0.3, 1.00 / 1.50);
                 Material right = Material(1, vec3(0.8, 0.6, 0.2), 1., 0.);
                 
                 // setting up world
@@ -628,7 +639,8 @@ const Raytrace = () => {
                 world[0] = Sphere(vec3(0., 0., -1.2), 0.5, center); // center sphere
                 world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, ground); // ground
                 world[2] = Sphere(vec3(-1.0, 0., -1.0), 0.5, left); // left sphere
-                world[3] = Sphere(vec3(1.0, 0.0, -1.0), 0.5, right); // right sphere
+                world[3] = Sphere(vec3(-1.0, 0., -1.0), 0.4, bubble); // left sphere (bubble)
+                world[4] = Sphere(vec3(1.0, 0.0, -1.0), 0.5, right); // right sphere
 
                 // old code for just interpolating colors. no traditional sampling
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
