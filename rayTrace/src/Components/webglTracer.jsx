@@ -74,6 +74,7 @@ const pixelCode = [
         vec3 albedo;
 
         float fuzzyness;
+        float refraction_index;
     };`,
 
     `
@@ -367,6 +368,24 @@ const pixelCode = [
     }`,
 
     `
+    // dielectric scatter function
+    bool dielectric_scatter(Ray ray_in, out vec3 scatter_direction, out Ray scattered, out vec3 attenuation, hit_record rec) {
+        attenuation = vec3(1., 1., 1.);
+
+        float ri = rec.front_face ? (1.0 / rec.mat.refraction_index) : rec.mat.refraction_index;
+        
+        vec3 unit_direction = normalize(ray_in.direction);
+
+        vec3 refracted = refracting(unit_direction, rec.normal, ri);
+
+        scatter_direction = refracted;
+
+        scattered = Ray(rec.p, refracted);
+        return true;
+    }
+    `,
+
+    `
     // calcualte the color for pixel based on rays direction
     vec3 ray_color(in Ray ray, Sphere[MAX_SPHERE] world, vec2 st) {
         hit_record rec;
@@ -403,6 +422,12 @@ const pixelCode = [
                         continue_bouncing = true;
                     }
                 } 
+                else if (rec.mat.type == DIELECTRIC) { // metal light reflectance
+
+                    if (dielectric_scatter(curr, scatter_direction, scattered, attenuation, rec)) {
+                        continue_bouncing = true;
+                    }
+                }
 
                 
                 if (continue_bouncing) { // if we can continue boucing let variables change
@@ -582,13 +607,11 @@ const Raytrace = () => {
                 // setting up camera
                 Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
 
-                Material test = Material(0, vec3(0.7), 0.);
-
                 // material type labels (color values)
-                Material ground = Material(0, vec3(0.8, 0.8, 0.0), 0.);
-                Material center = Material(0, vec3(0.1, 0.2, 0.5), 0.);
-                Material left = Material(1, vec3(0.8, 0.8, 0.8), 0.3);
-                Material right = Material(1, vec3(0.8, 0.6, 0.2), 1.);
+                Material ground = Material(0, vec3(0.8, 0.8, 0.0), 0., 0.);
+                Material center = Material(0, vec3(0.1, 0.2, 0.5), 0., 0.);
+                Material left = Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.5);
+                Material right = Material(1, vec3(0.8, 0.6, 0.2), 1., 0.);
                 
                 // setting up world
                 Sphere world[MAX_SPHERE];
