@@ -2,6 +2,33 @@ import React, { useRef, useEffect } from 'react';
 import * as twgl from 'twgl.js';
 
 const pixelCode = [
+
+    // uniforms
+    `
+    uniform sampler2D u_texture;
+    uniform  vec3 camera_center;
+    uniform vec3 pixel_delta_u;
+    uniform vec3 pixel_delta_v;
+    uniform vec3 pixel00_loc;
+    uniform float iteration;
+    uniform float seed;
+    `,
+
+    `
+    // constants
+    #define PI 3.1415926538
+    #define INFINITY 1.0 / 0.00000000001
+    #define MAX_SPHERE 4
+    #define RAND_MAX 2147483647.0
+    #define SAMPLES_PER_PIXEL 100.0
+    #define MAX_RAY_BOUNCES 10
+
+    // values we will use when determining matrial type
+    #define LAMBERTIAN 0
+    #define METAL 1
+    #define DIELECTRIC 2
+    `,
+
     // auxilary functions
     `
     // linearly interpolate between two values
@@ -26,32 +53,6 @@ const pixelCode = [
     vec3 reflection(vec3 v, vec3 n) {
         return v - 2. * dot(v, n) * n;
     }`,
-
-    // uniforms
-    `
-    uniform sampler2D u_texture;
-    uniform  vec3 camera_center;
-    uniform vec3 pixel_delta_u;
-    uniform vec3 pixel_delta_v;
-    uniform vec3 pixel00_loc;
-    uniform float iteration;
-    uniform float seed;
-    `,
-
-    `
-    // constants
-    #define PI 3.1415926538
-    #define INFINITY 1.0 / 0.00000000001
-    #define MAX_SPHERE 2
-    #define RAND_MAX 2147483647.0
-    #define SAMPLES_PER_PIXEL 100.0
-    #define MAX_RAY_BOUNCES 10
-
-    // values we will use when determining matrial type
-    #define LAMBERTIAN 0
-    #define METAL 1
-    #define DIELECTRIC 2
-    `,
 
     // structs to be treated almost as if creating objects
 
@@ -338,6 +339,18 @@ const pixelCode = [
     }`,
 
     `
+    // metal scatter function
+    bool metalic_scatter(Ray ray_in, out vec3 scatter_direction, out Ray scattered, out vec3 attenuation, hit_record rec) {
+        // new direction for the new ray that bounces off a surface
+        scatter_direction = reflection(ray_in.direction, rec.normal);
+
+        scattered = Ray(rec.p, scatter_direction);
+
+        attenuation *= rec.mat.albedo;
+        return true;
+    }`,
+
+    `
     // calcualte the color for pixel based on rays direction
     vec3 ray_color(in Ray ray, Sphere[MAX_SPHERE] world, vec2 st) {
         hit_record rec;
@@ -368,15 +381,12 @@ const pixelCode = [
                         continue_bouncing = true;
                     } 
                 }
-                // else if () { // metal light reflectance
+                else if (rec.mat.type == METAL) { // metal light reflectance
 
-                // } 
-                else { // default to lambertian light bounce if there is no matching material 
-                    
-                    if (lambertian_scatter(scatter_direction, scattered, attenuation, rec, st)) {
+                    if (metalic_scatter(curr, scatter_direction, scattered, attenuation, rec)) {
                         continue_bouncing = true;
                     }
-                }
+                } 
 
                 
                 if (continue_bouncing) { // if we can continue boucing let variables change
@@ -399,8 +409,10 @@ const pixelCode = [
 
                 return (color * attenuation);
 
-            }   
+            } 
         }
+        // if we break out of loop without returning then return the color black
+        return color;
     }`,
 ]
 
@@ -555,11 +567,19 @@ const Raytrace = () => {
                 Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
 
                 Material test = Material(0, vec3(0.7), 0.);
+
+                // material type labels (color values)
+                Material ground = Material(0, vec3(0.8, 0.8, 0.0), 0.);
+                Material center = Material(0, vec3(0.1, 0.2, 0.5), 0.);
+                Material left = Material(1, vec3(0.8, 0.8, 0.8), 0.);
+                Material right = Material(1, vec3(0.8, 0.6, 0.2), 0.);
                 
                 // setting up world
                 Sphere world[MAX_SPHERE];
-                world[0] = Sphere(vec3(0., 0., -1.), 0.5, test);
-                world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, test);
+                world[0] = Sphere(vec3(0., 0., -1.2), 0.5, center); // center sphere
+                world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, ground); // ground
+                world[2] = Sphere(vec3(-1.0, 0., -1.0), 0.5, left); // left sphere
+                world[3] = Sphere(vec3(1.0, 0.0, -1.0), 0.5, right); // right sphere
 
                 // old code for just interpolating colors. no traditional sampling
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);

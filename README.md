@@ -34,20 +34,21 @@ https://byteblacksmith.com/improvements-to-the-canonical-one-liner-glsl-rand-for
 
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/fcb96ed3-f2fd-436e-8281-937b59cda2fb)
 
-## instead of normals the color is based on the attenuation value that increases when a ray bounces more
+## instead of normals the color is based on the attenuation value that decreases when a ray bounces more
 
-A small thing to note is I have made a transition from useing traditional sampling to a progressiver rendering technique to save on performance due to the limitations of my computers gpu.
+A small thing to note is I have made a transition from using traditional sampling to a progressiver rendering technique to save on performance due to the limitations of my computers gpu.
 
-The image below is the traditional approach that takes a long time to render and still has issues with shadow acne and noticable noise. The smaller image with gamma corrected color is progressively rendered and has shadow acne removed and is quite accurate to the gbook example.
+The image below is the traditional approach that takes a long time to render and still has issues with shadow acne and noticable noise. The smaller image with gamma corrected color is progressively rendered and has shadow acne removed and is quite accurate to the guided tautorial book example that is quicker to render.
 
 ![image](https://github.com/jaedenHob/Ray-Tracing/assets/92416232/98f118b5-5845-432e-96d6-3c765f6bd1a9)
 
+## lambertian sphere 
 
 ![alt text](image.png)
 
-above is accurate lambertian sphere with reflections of rays
+## lambertian sphere between 2 metallic spheres
 
-Above is the raytracer itself (In progress).
+![alt text](image-1.png)
 
 ## To install just copy the repo then install the dependencies:
 
