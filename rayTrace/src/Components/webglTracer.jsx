@@ -1,10 +1,6 @@
 import React, { useRef, useEffect } from 'react';
 import * as twgl from 'twgl.js';
 
-function degrees_to_radians(degrees) {
-    return degrees * (3.1415926538) / 180.0;
-}
-
 const pixelCode = [
 
     // uniforms
@@ -22,7 +18,7 @@ const pixelCode = [
     // constants
     #define PI 3.1415926538
     #define INFINITY 1.0 / 0.00000000001
-    #define MAX_SPHERE 2
+    #define MAX_SPHERE 5
     #define RAND_MAX 2147483647.0
     #define SAMPLES_PER_PIXEL 100.0
     #define MAX_RAY_BOUNCES 5
@@ -482,6 +478,68 @@ const pixelCode = [
 ]
 
 const Raytrace = () => {
+
+    // auxilary functions for camera
+    function degrees_to_radians(degrees) {
+        return degrees * (3.1415926538) / 180.0;
+    }
+
+    function distance(p1, p2) {
+        const dx = p1[0] - p2[0];
+        const dy = p1[1] - p2[1];
+        const dz = p1[2] - p2[2];
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    function normalize(vector) {
+        // Calculate the magnitude of the vector
+        const magnitude = Math.sqrt(vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2]);
+
+        // Check if the magnitude is not zero to avoid division by zero
+        if (magnitude !== 0) {
+            // Divide each component by the magnitude to normalize the vector
+            const normalizedVector = [
+                vector[0] / magnitude,
+                vector[1] / magnitude,
+                vector[2] / magnitude
+            ];
+            return normalizedVector;
+        } else {
+            // If the vector is already a zero vector, return the original vector
+            return vector;
+        }
+    }
+
+    function subtract_vectors(vec1, vec2) {
+        return [
+            vec1[0] - vec2[0],
+            vec1[1] - vec2[1],
+            vec1[2] - vec2[2]
+        ]
+    }
+
+    function cross_product(vec1, vec2) {
+        let x = vec1[1] * vec2[2] - vec1[2] * vec2[1];
+        let y = vec1[2] * vec2[0] - vec1[0] * vec2[2];
+        let z = vec1[0] * vec2[1] - vec1[1] * vec2[0];
+
+        return [x, y, z];
+    }
+
+    function multiply_a_vector(vec1, multiple) {
+
+        let x = vec1[0] * multiple;
+        let y = vec1[1] * multiple;
+        let z = vec1[2] * multiple;
+
+        return [x, y, z];
+    }
+
+    function negative_vector(vec) {
+        return[-vec[0], -vec[1], -vec[2]];
+    }
+
+
     // variables local to Raytrace
     let width = 400;
     let height = 225;
@@ -491,6 +549,12 @@ const Raytrace = () => {
 
     useEffect(() => {
         const vfov = 90;
+
+        const lookfrom = [0.0, 0.0, 0.0]; // point camera is looking from
+        const lookat = [0.0, 0.0, -1.0]; // point that camera is looking at
+        const vup = [0.0, 1.0, 0.0]; // camera up direction
+
+        let u, v, w; // camra frame basis vectors
 
         // rendered image setup
         const aspect_ratio = 16.0 / 9.0;
@@ -502,16 +566,22 @@ const Raytrace = () => {
         // console.log(image_height);
 
         // camera (viewport dimensions)
-        const focal_length = 1.0;
+        const camera_center = lookfrom;
+
+        const focal_length = distance(lookfrom, lookat);
         const theta = degrees_to_radians(vfov);
         const h = Math.tan(theta/2.);
         const viewport_height = 2.0 * h * focal_length;
         const viewport_width = viewport_height * (image_width / image_height);
-        const camera_center = [0.0, 0, 0];
+
+        // calculate the u, v, w unit basis vectors for the camera coordinate frame
+        w = normalize(subtract_vectors(lookfrom, lookat));
+        u = normalize(cross_product(vup, w));
+        v = cross_product(w, u);
 
         // Calculate the vectors across the horizontal and down the vertical viewport edges.
-        let viewport_u = [viewport_width, 0, 0];
-        let viewport_v = [0, viewport_height, 0];
+        let viewport_u = multiply_a_vector(u, viewport_width);
+        let viewport_v = multiply_a_vector(negative_vector(v), viewport_height);
 
         // Calculate the horizontal and vertical delta vectors from pixel to pixel.
         let pixel_delta_u = viewport_u.map(component => component / image_width);
@@ -520,10 +590,12 @@ const Raytrace = () => {
         // console.log(pixel_delta_u + " " + pixel_delta_v);
 
         // Calculate the location of the upper left pixel.
+        let focal_w = multiply_a_vector(w, focal_length);
+
         let viewport_upper_left = [
-            camera_center[0] - (0.5 * viewport_u[0]) - (0.5 * viewport_v[0]),
-            camera_center[1] - (0.5 * viewport_u[1]) - (0.5 * viewport_v[1]),
-            camera_center[2] - focal_length - (0.5 * viewport_u[2]) - (0.5 * viewport_v[2])
+            camera_center[0] - (focal_w[0]) - (0.5 * viewport_u[0]) - (0.5 * viewport_v[0]),
+            camera_center[1] - (focal_w[1]) - (0.5 * viewport_u[1]) - (0.5 * viewport_v[1]),
+            camera_center[2] - (focal_w[2]) - (0.5 * viewport_u[2]) - (0.5 * viewport_v[2])
         ];
 
         // console.log(viewport_upper_left);
@@ -654,11 +726,11 @@ const Raytrace = () => {
                 world[1] = Sphere(vec3(R, 0., -1.0), R, right_purple);
 
                 // world generation
-                // world[0] = Sphere(vec3(0., 0., -1.2), 0.5, center); // center sphere
-                // world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, ground); // ground
-                // world[2] = Sphere(vec3(-1.0, 0., -1.0), 0.5, left); // left sphere
-                // world[3] = Sphere(vec3(-1.0, 0., -1.0), 0.4, bubble); // left sphere (bubble)
-                // world[4] = Sphere(vec3(1.0, 0.0, -1.0), 0.5, right); // right sphere
+                world[0] = Sphere(vec3(0., 0., -1.2), 0.5, center); // center sphere
+                world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, ground); // ground
+                world[2] = Sphere(vec3(-1.0, 0., -1.0), 0.5, left); // left sphere
+                world[3] = Sphere(vec3(-1.0, 0., -1.0), 0.4, bubble); // left sphere (bubble)
+                world[4] = Sphere(vec3(1.0, 0.0, -1.0), 0.5, right); // right sphere
 
                 // old code for just interpolating colors. no traditional sampling
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
