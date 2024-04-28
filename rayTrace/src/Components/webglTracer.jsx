@@ -54,6 +54,16 @@ const pixelCode = [
         return v - 2. * dot(v, n) * n;
     }`,
 
+    `
+    // function to calculate refractions
+    vec3 refracting(vec3 uv, vec3 n, float etai_over_etat) {
+        float cos_theta = min(dot(-uv, n), 1.0);
+
+        vec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
+        vec3 r_out_parallel = -sqrt(abs(1.0 - dot(r_out_perp, r_out_perp))) * n;
+        return r_out_perp + r_out_parallel;
+    }`,
+
     // structs to be treated almost as if creating objects
 
     `
