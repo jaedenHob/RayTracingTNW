@@ -334,7 +334,7 @@ const pixelCode = [
     // functions for calculating light reflections from different sphere material types
     `
     // lambertian scatter
-    bool lambertian_scatter(out vec3 scatter_direction, out Ray scattered, out vec3 attenuation, hit_record rec, vec2 st) {
+    bool lambertian_scatter(out vec3 scatter_direction, out vec3 attenuation, hit_record rec, vec2 st) {
         // new direction for the new ray that bounces off a surface
         scatter_direction = rec.normal + random_unit_vector(st);
 
@@ -343,15 +343,13 @@ const pixelCode = [
             scatter_direction = rec.normal;
         }
 
-        scattered = Ray(rec.p, scatter_direction);
-
         attenuation *= rec.mat.albedo;
         return true;
     }`,
 
     `
     // metal scatter function
-    bool metalic_scatter(Ray ray_in, out vec3 scatter_direction, out Ray scattered, out vec3 attenuation, hit_record rec, vec2 st) {
+    bool metalic_scatter(Ray ray_in, out vec3 scatter_direction, out vec3 attenuation, hit_record rec, vec2 st) {
         // local variables
         vec3 reflected;
 
@@ -360,8 +358,6 @@ const pixelCode = [
 
         scatter_direction = normalize(reflected) + (rec.mat.fuzzyness * random_unit_vector(st));
 
-        scattered = Ray(rec.p, scatter_direction);
-
         attenuation *= rec.mat.albedo;
 
         return (dot(scatter_direction, rec.normal) > 0.0);
@@ -369,18 +365,33 @@ const pixelCode = [
 
     `
     // dielectric scatter function
-    bool dielectric_scatter(Ray ray_in, out vec3 scatter_direction, out Ray scattered, out vec3 attenuation, hit_record rec) {
+    bool dielectric_scatter(Ray ray_in, out vec3 scatter_direction, out vec3 attenuation, hit_record rec) {
         attenuation = vec3(1., 1., 1.);
 
         float ri = rec.front_face ? (1.0 / rec.mat.refraction_index) : rec.mat.refraction_index;
         
         vec3 unit_direction = normalize(ray_in.direction);
 
-        vec3 refracted = refracting(unit_direction, rec.normal, ri);
+        float cos_theta = min(dot(-unit_direction, rec.normal), 1.0);
+        float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
 
-        scatter_direction = refracted;
+        bool cannot_refract;
+        vec3 direction;
 
-        scattered = Ray(rec.p, refracted);
+        if ((ri * sin_theta) > 1.0) {
+            cannot_refract = true; // reflect
+        } else {
+            cannot_refract = false; // refract
+        }
+
+        if (cannot_refract) {
+            direction = reflection(unit_direction, rec.normal);
+        } else {
+            direction = refracting(unit_direction, rec.normal, ri);
+        }
+
+        scatter_direction = direction;
+
         return true;
     }
     `,
@@ -393,7 +404,6 @@ const pixelCode = [
         int bounce = 0;
         
         Ray curr = ray; // tracking current ray calculations
-        Ray scattered; // newly created scattered ray after bounce
 
         vec3 attenuation = vec3(1.);
         vec3 scatter_direction;
@@ -412,19 +422,19 @@ const pixelCode = [
                 // need a set of switch or if statements based on sphere material type
                 if (rec.mat.type == LAMBERTIAN) { // lambertian light scatter
 
-                    if (lambertian_scatter(scatter_direction, scattered, attenuation, rec, st)) {
+                    if (lambertian_scatter(scatter_direction, attenuation, rec, st)) {
                         continue_bouncing = true;
                     } 
                 }
                 else if (rec.mat.type == METAL) { // metal light reflectance
 
-                    if (metalic_scatter(curr, scatter_direction, scattered, attenuation, rec, st)) {
+                    if (metalic_scatter(curr, scatter_direction, attenuation, rec, st)) {
                         continue_bouncing = true;
                     }
                 } 
                 else if (rec.mat.type == DIELECTRIC) { // metal light reflectance
 
-                    if (dielectric_scatter(curr, scatter_direction, scattered, attenuation, rec)) {
+                    if (dielectric_scatter(curr, scatter_direction, attenuation, rec)) {
                         continue_bouncing = true;
                     }
                 }
@@ -610,7 +620,7 @@ const Raytrace = () => {
                 // material type labels (color values)
                 Material ground = Material(0, vec3(0.8, 0.8, 0.0), 0., 0.);
                 Material center = Material(0, vec3(0.1, 0.2, 0.5), 0., 0.);
-                Material left = Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.5);
+                Material left = Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.00 / 1.33);
                 Material right = Material(1, vec3(0.8, 0.6, 0.2), 1., 0.);
                 
                 // setting up world
