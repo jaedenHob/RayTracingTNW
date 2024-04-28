@@ -58,6 +58,10 @@ The image below is the traditional approach that takes a long time to render and
 
 ![alt text](image-3.png)
 
+## camera focal and positioning changes
+
+![alt text](image-4.png)
+
 ## To install just copy the repo then install the dependencies:
 
 `npm install`
