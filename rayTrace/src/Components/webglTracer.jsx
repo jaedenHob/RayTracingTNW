@@ -12,6 +12,9 @@ const pixelCode = [
     uniform vec3 pixel00_loc;
     uniform float iteration;
     uniform float seed;
+    uniform float defocus_angle;
+    uniform vec3 defocus_disk_u;
+    uniform vec3 defocus_disk_v;
     `,
 
     `
@@ -304,6 +307,31 @@ const pixelCode = [
     }`,
 
     `
+    // returns a vector to a random point on a unit disk
+    vec3 random_in_unit_disk(vec2 st) {
+        float i = 1.0;
+        vec2 tmp = st;
+
+        while(true) {
+            vec3 p = vec3(random_double_interval(tmp, -1.0, 1.0), random_double_interval(tmp * (seed + 2.), -1.0, 1.0), 0);
+            
+            if (dot(p, p) < 1.) {
+                return p;
+            }
+
+            tmp = vec2(tmp.x + i, tmp.y + i);
+            i += seed;
+        }
+    }`,
+
+    `
+    // returns a random point in a camera defocus disk
+    vec3 defocus_disk_sample(vec2 st) {
+        vec3 p = random_in_unit_disk(st);
+        return camera_center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
+    }`,
+
+    `
     // returns a unit vector on unit vector sphere
     vec3 random_unit_vector(vec2 st) {
         return normalize(random_in_unit_sphere(st));
@@ -332,7 +360,8 @@ const pixelCode = [
                             + ((pos.x + offset.x) * pixel_delta_u)
                             + ((pos.y + offset.y) * pixel_delta_v);
 
-        vec3 ray_origin = camera_center;
+        // vec3 ray_origin = camera_center;
+        vec3 ray_origin = (defocus_angle <= 0.0) ? camera_center : defocus_disk_sample(st);
         vec3 ray_direction = pixel_sample - ray_origin;
 
         // created ray
@@ -554,6 +583,10 @@ const Raytrace = () => {
         const lookat = [0.0, 0.0, -1.0]; // point that camera is looking at
         const vup = [0.0, -1.0, 0.0]; // camera up direction
 
+        
+        let defocus_angle = 1.; // variation angle of rays through each pixel
+        let focus_dist = 10.0; //distance of camera from plane of perfect focus
+
         let u, v, w; // camra frame basis vectors
 
         // rendered image setup
@@ -568,10 +601,10 @@ const Raytrace = () => {
         // camera (viewport dimensions)
         const camera_center = lookfrom;
 
-        const focal_length = distance(lookfrom, lookat);
+        // const focal_length = distance(lookfrom, lookat);
         const theta = degrees_to_radians(vfov);
         const h = Math.tan(theta/2.);
-        const viewport_height = 2.0 * h * focal_length;
+        const viewport_height = 2.0 * h * focus_dist;
         const viewport_width = viewport_height * (image_width / image_height);
 
         // calculate the u, v, w unit basis vectors for the camera coordinate frame
@@ -590,7 +623,7 @@ const Raytrace = () => {
         // console.log(pixel_delta_u + " " + pixel_delta_v);
 
         // Calculate the location of the upper left pixel.
-        let focal_w = multiply_a_vector(w, focal_length);
+        let focal_w = multiply_a_vector(w, focus_dist);
 
         let viewport_upper_left = [
             camera_center[0] - (focal_w[0]) - (0.5 * viewport_u[0]) - (0.5 * viewport_v[0]),
@@ -606,7 +639,11 @@ const Raytrace = () => {
             viewport_upper_left[2] + 0.5 * (pixel_delta_u[2] + pixel_delta_v[2])
         ];
         
-        // console.log(pixel00_loc);
+        // calculate the camera defocus disk basis vectors
+        let defocus_radius = focus_dist * Math.tan(degrees_to_radians(defocus_angle / 2.));
+        let defocus_disk_u = multiply_a_vector(u, defocus_radius);
+        let defocus_disk_v = multiply_a_vector(v, defocus_radius);
+
 
         const canvas = canvasRef.current;
 
@@ -797,7 +834,10 @@ const Raytrace = () => {
                 pixel00_loc: pixel00_loc,
                 u_texture: fb1.attachments[0],
                 iteration: parseFloat(iteration),
-                seed: seed
+                seed: seed,
+                defocus_angle: defocus_angle,
+                defocus_disk_u: defocus_disk_u,
+                defocus_disk_v: defocus_disk_v
             };
 
             // console.log(uniforms);
