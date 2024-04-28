@@ -1,6 +1,10 @@
 import React, { useRef, useEffect } from 'react';
 import * as twgl from 'twgl.js';
 
+function degrees_to_radians(degrees) {
+    return degrees * (3.1415926538) / 180.0;
+}
+
 const pixelCode = [
 
     // uniforms
@@ -18,10 +22,10 @@ const pixelCode = [
     // constants
     #define PI 3.1415926538
     #define INFINITY 1.0 / 0.00000000001
-    #define MAX_SPHERE 5
+    #define MAX_SPHERE 2
     #define RAND_MAX 2147483647.0
     #define SAMPLES_PER_PIXEL 100.0
-    #define MAX_RAY_BOUNCES 10
+    #define MAX_RAY_BOUNCES 5
 
     // values we will use when determining matrial type
     #define LAMBERTIAN 0
@@ -486,6 +490,7 @@ const Raytrace = () => {
     const canvasRef = useRef(null);
 
     useEffect(() => {
+        const vfov = 90;
 
         // rendered image setup
         const aspect_ratio = 16.0 / 9.0;
@@ -496,9 +501,11 @@ const Raytrace = () => {
 
         // console.log(image_height);
 
-        // camera
+        // camera (viewport dimensions)
         const focal_length = 1.0;
-        const viewport_height = 2.0;
+        const theta = degrees_to_radians(vfov);
+        const h = Math.tan(theta/2.);
+        const viewport_height = 2.0 * h * focal_length;
         const viewport_width = viewport_height * (image_width / image_height);
         const camera_center = [0.0, 0, 0];
 
@@ -636,11 +643,22 @@ const Raytrace = () => {
                 
                 // setting up world
                 Sphere world[MAX_SPHERE];
-                world[0] = Sphere(vec3(0., 0., -1.2), 0.5, center); // center sphere
-                world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, ground); // ground
-                world[2] = Sphere(vec3(-1.0, 0., -1.0), 0.5, left); // left sphere
-                world[3] = Sphere(vec3(-1.0, 0., -1.0), 0.4, bubble); // left sphere (bubble)
-                world[4] = Sphere(vec3(1.0, 0.0, -1.0), 0.5, right); // right sphere
+
+                // spheres for testing camera viewpoint
+                float R = cos(PI / 4.);
+
+                Material left_green = Material(0, vec3(0., 1., 0.), 0., 0.);
+                Material right_purple = Material(0, vec3(1., 0., 1.), 0., 0.);
+
+                world[0] = Sphere(vec3(-R, 0., -1.0), R, left_green);
+                world[1] = Sphere(vec3(R, 0., -1.0), R, right_purple);
+
+                // world generation
+                // world[0] = Sphere(vec3(0., 0., -1.2), 0.5, center); // center sphere
+                // world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, ground); // ground
+                // world[2] = Sphere(vec3(-1.0, 0., -1.0), 0.5, left); // left sphere
+                // world[3] = Sphere(vec3(-1.0, 0., -1.0), 0.4, bubble); // left sphere (bubble)
+                // world[4] = Sphere(vec3(1.0, 0.0, -1.0), 0.5, right); // right sphere
 
                 // old code for just interpolating colors. no traditional sampling
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
