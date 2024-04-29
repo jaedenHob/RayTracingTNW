@@ -173,6 +173,16 @@ const Ping_pong_animation = () => {
     <>
         <div className='centered-container'>
               <canvas ref={canvasRef} width={width} height={height} />
+
+              <br />
+
+              <p>
+                Researching how I can avoid losing gl context which is cause by the browser refreshing when
+                a frame takes to long to render and so the browser restarts assumeing that an error occured
+                to webgl. Thats when I learned of the Ping Pong technique where by breaking the calculation 
+                down into simpler parts that can then allow frames to render faster. Above is an example of
+                this where I learned of this approach. <a href='https://observablehq.com/@spattana/ping-pong-approach-for-progressive-rendering'>Progressive Rendering</a>
+              </p>
         </div>
     </>
   )
