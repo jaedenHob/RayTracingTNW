@@ -1,4 +1,4 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import * as twgl from 'twgl.js';
 
 const pixelCode = [
@@ -576,10 +576,23 @@ const Raytrace = () => {
     // canvas reference
     const canvasRef = useRef(null);
 
+    const [cameraPosition, setCameraPosition] = useState([13.0, 2.0, -3.0]); // Initial camera position
+    const [sliderValues, setSliderValues] = useState({
+        posX: 13.0,
+        posY: 2.0,
+        posZ: -3.0
+    });
+
     useEffect(() => {
+
+        // Update camera position when slider values change
+
+        if (cameraPosition[0] !== sliderValues.posX || cameraPosition[1] !== sliderValues.posY || cameraPosition[2] !== sliderValues.posZ)
+            setCameraPosition([sliderValues.posX, sliderValues.posY, sliderValues.posZ]);
+
         const vfov = 20;
 
-        const lookfrom = [13.0, 2.0, -3.0]; // point camera is looking from
+        const lookfrom = cameraPosition; // point camera is looking from
         const lookat = [0.0, 0.0, 0.0]; // point that camera is looking at
         const vup = [0.0, -1.0, 0.0]; // camera up direction
 
@@ -952,13 +965,62 @@ const Raytrace = () => {
         var iteration = 0;
         var start_time = performance.now();
         renderLoop();
-    });
+    }, [cameraPosition, sliderValues]);
+
+    // Event handler for slider value changes
+    const handleSliderChange = (e) => {
+        const { name, value } = e.target;
+        setSliderValues(prevState => ({
+            ...prevState,
+            [name]: parseFloat(value)
+        }));
+    };
 
     return (
         <>
             <div className='centered-container'>
                 <div>fps: <span id="fps"></span></div>
+                
                 <canvas ref={canvasRef} width={width} height={width / (16.0 / 9.0)}></canvas>
+
+                <div>
+                    <br />
+
+                    <p>Camera position:</p>
+
+                    {/* Sliders for adjusting camera position */}
+                    <label>Position X:</label>
+                    <input
+                        type="range"
+                        min="-20"
+                        max="20"
+                        step="0.1"
+                        name="posX"
+                        value={sliderValues.posX}
+                        onChange={handleSliderChange}
+                    />
+                    <label>Position Y:</label>
+                    <input
+                        type="range"
+                        min="-20"
+                        max="20"
+                        step="0.1"
+                        name="posY"
+                        value={sliderValues.posY}
+                        onChange={handleSliderChange}
+                    />
+                    <label>Position Z:</label>
+                    <input
+                        type="range"
+                        min="-20"
+                        max="20"
+                        step="0.1"
+                        name="posZ"
+                        value={sliderValues.posZ}
+                        onChange={handleSliderChange}
+                    />
+                </div>
+                
             </div>
         </>
     );
