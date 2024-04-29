@@ -570,7 +570,7 @@ const Raytrace = () => {
 
 
     // variables local to Raytrace
-    let width = 800;
+    let width = 450;
     
 
     // canvas reference
@@ -1002,7 +1002,7 @@ const Raytrace = () => {
                     <label>Position Y:</label>
                     <input
                         type="range"
-                        min="-20"
+                        min="1"
                         max="20"
                         step="0.1"
                         name="posY"
