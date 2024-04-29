@@ -5,8 +5,8 @@ import * as twgl from 'twgl.js';
 
 const Ping_pong_animation = () => {
     // variables local to test
-    let width = 800;
-    let height = 600;
+    let width = 400;
+    let height = 350;
 
     // canvas reference
     const canvasRef = useRef(null);

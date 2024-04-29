@@ -21,9 +21,9 @@ const pixelCode = [
     // constants
     #define PI 3.1415926538
     #define INFINITY 1.0 / 0.00000000001
-    #define MAX_SPHERE 5
+    #define MAX_SPHERE 7
     #define RAND_MAX 2147483647.0
-    #define SAMPLES_PER_PIXEL 100.0
+    // #define SAMPLES_PER_PIXEL 100.0
     #define MAX_RAY_BOUNCES 5
 
     // values we will use when determining matrial type
@@ -570,31 +570,33 @@ const Raytrace = () => {
 
 
     // variables local to Raytrace
-    let width = 400;
-    let height = 225;
+    let width = 800;
+    
 
     // canvas reference
     const canvasRef = useRef(null);
 
     useEffect(() => {
-        const vfov = 90;
+        const vfov = 20;
 
-        const lookfrom = [0.0, 0.0, -2.0]; // point camera is looking from
-        const lookat = [0.0, 0.0, -1.0]; // point that camera is looking at
+        const lookfrom = [13.0, 2.0, -3.0]; // point camera is looking from
+        const lookat = [0.0, 0.0, 0.0]; // point that camera is looking at
         const vup = [0.0, -1.0, 0.0]; // camera up direction
 
         
-        let defocus_angle = 1.; // variation angle of rays through each pixel
+        let defocus_angle = 0.6; // variation angle of rays through each pixel
         let focus_dist = 10.0; //distance of camera from plane of perfect focus
 
         let u, v, w; // camra frame basis vectors
 
         // rendered image setup
         const aspect_ratio = 16.0 / 9.0;
-        const image_width = 400;
+        const image_width = width;
 
         // calculate image height that is at least 1
         var image_height = image_width / aspect_ratio;
+
+        let height = image_height;
 
         // console.log(image_height);
 
@@ -742,34 +744,74 @@ const Raytrace = () => {
                 
                 // setting up camera
                 Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
-
-                // material type labels (color values)
-                Material ground = Material(0, vec3(0.8, 0.8, 0.0), 0., 0.);
-                Material center = Material(0, vec3(0.1, 0.2, 0.5), 0., 0.);
-                Material left = Material(2, vec3(0., 0., 0.), 0.3, 1.50);
-                Material bubble = Material(2, vec3(0., 0., 0.), 0.3, 1.00 / 1.50);
-                Material right = Material(1, vec3(0.8, 0.6, 0.2), 1., 0.);
                 
-                // setting up world
+                // initializing world array
                 Sphere world[MAX_SPHERE];
 
-                // spheres for testing camera viewpoint
-                float R = cos(PI / 4.);
+                // creating the ground
+                Material ground = Material(0, vec3(0.5), 0., 0.);
+                world[0] = Sphere(vec3(0, -1000.0, 0), 1000.0, ground);
 
-                Material left_green = Material(0, vec3(0., 1., 0.), 0., 0.);
-                Material right_purple = Material(0, vec3(1., 0., 1.), 0., 0.);
+                // the three distinct large spheres in scene
+                Material sphere1 = Material(2, vec3(0.0), 0.0, 1.5);
+                world[1] = Sphere(vec3(0., 1.0, 0.), 1.0, sphere1);
 
-                world[0] = Sphere(vec3(-R, 0., -1.0), R, left_green);
-                world[1] = Sphere(vec3(R, 0., -1.0), R, right_purple);
+                Material sphere2 = Material(0, vec3(0.4, 0.2, 0.1), 0., 0.);
+                world[2] = Sphere(vec3(-4., 1.0, 0.0), 1.0, sphere2);
 
-                // world generation
-                world[0] = Sphere(vec3(0., 0., -0.8), 0.5, center); // center sphere
-                world[1] = Sphere(vec3(0., -100.5, -1.), 100.0, ground); // ground
-                world[2] = Sphere(vec3(-1., 0., -1.), 0.5, left); // left sphere
-                world[3] = Sphere(vec3(-1., 0., -1.), 0.4, bubble); // left sphere (bubble)
-                world[4] = Sphere(vec3(1., 0.0, -1.), 0.5, right); // right sphere
+                Material sphere3 = Material(1, vec3(0.7, 0.6, 0.5), 0., 0.);
+                world[3] = Sphere(vec3(4., 1.0, 0.), 1.0, sphere3);
 
-                // old code for just interpolating colors. no traditional sampling
+                // manual input of spheres
+
+                // the three distinct large spheres in scene
+                Material sphere4 = Material(2, vec3(0.0), 0.0, 1.5);
+                world[4] = Sphere(vec3(2.5, 0.2, -3.), 0.2, sphere4);
+
+                Material sphere5 = Material(0, vec3(1., 0.2, 0.1), 0., 0.);
+                world[5] = Sphere(vec3(6., 0.2, -1.0), 0.2, sphere5);
+
+                Material sphere6 = Material(1, vec3(0.0, 1., 0.5), 0., 0.);
+                world[6] = Sphere(vec3(8., 0.2, 0.), 0.2, sphere6);
+
+                // Random spheres generation to generate final scene applying all techniques
+                // from raytracing in one weekend (gonna manually generate spheres into world due to performance issues)
+
+                // int index = 3;
+                // vec3 albedo;
+
+                // float fuzz;
+
+                // for (int a = -11; a < 11; a++) {
+                //     for (int b = -11; b < 11; b++) {
+                //         float choose_mat = random_double(st * float((a + 22) + b));
+
+                //         vec3 center = vec3(float(a) + 0.9 * random_double(vec2(st.x + seed + float(a + 11), st.y + seed + float(a + 11))), 
+                //                            0.2, 
+                //                            float(b) + 0.9 * random_double(vec2(st.y + seed + float(b + 11), st.x + seed + float(b + 11))));
+                        
+                //         if (index < MAX_SPHERE)
+                //             if (length(center - vec3(4, 0.2, 0.)) > 0.9) {
+                //                 index++;
+                //                 if (choose_mat < 0.8) {
+                //                     // diffuse sphere
+                //                     albedo = vec3(random_double(center.xy) * random_double(center.yx), random_double(center.yz) * random_double(center.zy), random_double(center.xz) * random_double(center.zx));
+                //                     world[index] = Sphere(center, 0.2, Material(0, albedo, 0., 0.));
+                //                 } else if (choose_mat < 0.95) {
+                //                     // metal sphere
+                //                     albedo = vec3(random_double(center.xy) * random_double(center.yx), random_double(center.yz) * random_double(center.zy), random_double(center.xz) * random_double(center.zx));
+                //                     fuzz = random_double_interval(center.yx, 0.0, 0.5);
+                //                     world[index] = Sphere(center, 0.2, Material(1, albedo, fuzz, 0.0));
+                //                 } else {
+                //                     // glass sphere
+                //                     world[index] = Sphere(center, 0.2, Material(2, vec3(0.0), 0.0, 1.5));
+                //                 }
+                //             }
+                //     }
+                // }
+
+
+                // code for interpolating colors
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
                 color = ray_color(ray, world, st);
 
@@ -906,7 +948,7 @@ const Raytrace = () => {
         <>
             <div className='centered-container'>
                 <div>fps: <span id="fps"></span></div>
-                <canvas ref={canvasRef} width="400" height="225"></canvas>
+                <canvas ref={canvasRef} width={width} height={width / (16.0 / 9.0)}></canvas>
             </div>
         </>
     );
