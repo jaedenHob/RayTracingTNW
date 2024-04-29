@@ -21,7 +21,7 @@ const pixelCode = [
     // constants
     #define PI 3.1415926538
     #define INFINITY 1.0 / 0.00000000001
-    #define MAX_SPHERE 7
+    #define MAX_SPHERE 10
     #define RAND_MAX 2147483647.0
     // #define SAMPLES_PER_PIXEL 100.0
     #define MAX_RAY_BOUNCES 5
@@ -773,6 +773,16 @@ const Raytrace = () => {
 
                 Material sphere6 = Material(1, vec3(0.0, 1., 0.5), 0., 0.);
                 world[6] = Sphere(vec3(8., 0.2, 0.), 0.2, sphere6);
+
+                // the three distinct large spheres in scene
+                Material sphere7 = Material(2, vec3(0.0), 0.0, 1.5);
+                world[7] = Sphere(vec3(9., 0.2, -3.), 0.2, sphere7);
+
+                Material sphere8 = Material(0, vec3(0.3, 0.7, 0.7), 0., 0.);
+                world[8] = Sphere(vec3(-7., 0.5, -4.0), 0.5, sphere8);
+
+                Material sphere9 = Material(1, vec3(1.0, 0.0, 1.0), 0., 0.);
+                world[9] = Sphere(vec3(0., 0.2, 3.0), 0.2, sphere9);
 
                 // Random spheres generation to generate final scene applying all techniques
                 // from raytracing in one weekend (gonna manually generate spheres into world due to performance issues)
