@@ -8,6 +8,7 @@ import About from './Pages/About.jsx';
 import Rays from './Pages/Rays.jsx';
 import Shadows from './Pages/Shadows.jsx';
 import RTIOW from './Pages/RTIOW.jsx'
+import RTTNW from './Pages/RTTNW.jsx'
 import Ping_pong_animation from "./Components/Test.jsx"
 
 
@@ -30,6 +31,7 @@ function App() {
           <Route path="/shadows" element={<Shadows />} />
           <Route path="/ping" element={<Ping_pong_animation />} />
           <Route path="/InOneWeekend" element={<RTIOW />} />
+          <Route path="/NextWeekend" element={<RTTNW />} />
 
         </Routes>
       </Suspense>

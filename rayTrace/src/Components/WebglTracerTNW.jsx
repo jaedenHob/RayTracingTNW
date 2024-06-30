@@ -506,7 +506,7 @@ const pixelCode = [
     }`,
 ]
 
-const Raytrace = () => {
+const RayTracerTNW = () => {
 
     // auxilary functions for camera
     function degrees_to_radians(degrees) {
@@ -1026,4 +1026,4 @@ const Raytrace = () => {
     );
 };
 
-export default Raytrace;
+export default RayTracerTNW;
