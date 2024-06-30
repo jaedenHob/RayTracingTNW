@@ -21,7 +21,7 @@ const pixelCode = [
     // constants
     #define PI 3.1415926538
     #define INFINITY 1.0 / 0.00000000001
-    #define MAX_SPHERE 10
+    #define MAX_SPHERE 1
     #define RAND_MAX 2147483647.0
     // #define SAMPLES_PER_PIXEL 100.0
     #define MAX_RAY_BOUNCES 5
@@ -506,6 +506,89 @@ const pixelCode = [
     }`,
 ]
 
+const PixelCode = [
+    // uniforms
+    `
+    uniform sampler2D u_texture;
+    uniform  vec3 camera_center;
+    uniform vec3 pixel_delta_u;
+    uniform vec3 pixel_delta_v;
+    uniform vec3 pixel00_loc;
+    uniform float iteration;
+    uniform float seed;
+    uniform float defocus_angle;
+    uniform vec3 defocus_disk_u;
+    uniform vec3 defocus_disk_v;
+    `,
+
+    `
+    // constants
+    #define PI 3.1415926538
+    #define INFINITY 1.0 / 0.00000000001
+    #define MAX_SPHERE 1
+    #define RAND_MAX 2147483647.0
+    // #define SAMPLES_PER_PIXEL 100.0
+    #define MAX_RAY_BOUNCES 5
+
+    // values we will use when determining matrial type
+    #define LAMBERTIAN 0
+    #define METAL 1
+    #define DIELECTRIC 2
+    `,
+
+    // auxillary functions
+
+    // reflections and refractions functions
+
+    // structs to be treated as objects
+    `
+    // defining a ray
+    struct Ray {
+        vec3 origin;
+        vec3 direction;
+    };`,
+
+    `
+    // defining the specific point on a ray
+    vec3 point_on_ray(Ray ray, float t) {
+        return (ray.origin + t * ray.direction);
+    }`,
+    // functions
+
+    // hitting sphere calculation
+    `
+    // hit sphere calculations
+    float hit_sphere (in vec3 center, in float radius, in Ray r) {
+        vec3 oc = center - r.origin;
+        float a = dot(r.direction, r.direction);
+        float b = -2.0 * dot(r.direction, oc);
+        float c = dot(oc, oc) - radius * radius;
+        float discriminant = b * b - 4. * a * c;
+
+        if (discriminant < 0.) {
+        return -1.0;
+        } else {
+            return (-b - sqrt(discriminant) ) / (2.0 * a);
+        }
+    }`,
+
+    // ray calculations and colors
+    `
+    // calcualte the color for pixel based on rays direction
+    vec3 ray_color(in Ray r) {
+        float t = hit_sphere(vec3(0.,0.,-1.), 0.5, r);
+
+        if ( t > 0.0) {
+            vec3 N = normalize(point_on_ray(r, t) - vec3(0.,0.,-1.));
+            return 0.5 * vec3(N.x + 1., N.y + 1., N.z + 1.);
+        }
+
+        vec3 unit_direction = normalize(r.direction);
+        float a = 0.5 * (unit_direction.y + 1.0);
+        return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+    }`,
+]
+
 const RayTracerTNW = () => {
 
     // auxilary functions for camera
@@ -743,7 +826,7 @@ const RayTracerTNW = () => {
 
             out vec4 fragColor;
 
-            ${pixelCode.join("\n//----------------")} // auxillary code
+            ${PixelCode.join("\n//----------------")} // auxillary code
 
             void main() {
                 // vector for resulting color as well as the texture from previous frame
@@ -752,101 +835,37 @@ const RayTracerTNW = () => {
                 vec4 tex_color = texture(u_texture, v_texcoord);
                 vec4 pixel_color;
 
+                vec3 pixel_center = pixel00_loc + (gl_FragCoord.x * pixel_delta_u) + (gl_FragCoord.y * pixel_delta_v);
+
+                vec3 ray_direction = pixel_center - camera_center;
+
+                Ray test = Ray(camera_center, ray_direction);
+
+                color = ray_color(test);
+
                 // postion on frament used as seeding for rnadom numbers
-                vec2 st = vec2(float(gl_FragCoord.x + seed), float(gl_FragCoord.y + seed));
+                // vec2 st = vec2(float(gl_FragCoord.x + seed), float(gl_FragCoord.y + seed));
                 
                 // setting up camera
-                Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
+                // Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
                 
                 // initializing world array
-                Sphere world[MAX_SPHERE];
-
-                // creating the ground
-                Material ground = Material(0, vec3(0.5), 0., 0.);
-                world[0] = Sphere(vec3(0, -1000.0, 0), 1000.0, ground);
-
-                // the three distinct large spheres in scene
-                Material sphere1 = Material(2, vec3(0.0), 0.0, 1.5);
-                world[1] = Sphere(vec3(0., 1.0, 0.), 1.0, sphere1);
-
-                Material sphere2 = Material(0, vec3(0.4, 0.2, 0.1), 0., 0.);
-                world[2] = Sphere(vec3(-4., 1.0, 0.0), 1.0, sphere2);
-
-                Material sphere3 = Material(1, vec3(0.7, 0.6, 0.5), 0., 0.);
-                world[3] = Sphere(vec3(4., 1.0, 0.), 1.0, sphere3);
-
-                // manual input of spheres
-
-                // the three distinct large spheres in scene
-                Material sphere4 = Material(2, vec3(0.0), 0.0, 1.5);
-                world[4] = Sphere(vec3(2.5, 0.2, -3.), 0.2, sphere4);
-
-                Material sphere5 = Material(0, vec3(1., 0.2, 0.1), 0., 0.);
-                world[5] = Sphere(vec3(6., 0.2, -1.0), 0.2, sphere5);
-
-                Material sphere6 = Material(1, vec3(0.0, 1., 0.5), 0., 0.);
-                world[6] = Sphere(vec3(8., 0.2, 0.), 0.2, sphere6);
-
-                // the three distinct large spheres in scene
-                Material sphere7 = Material(2, vec3(0.0), 0.0, 1.5);
-                world[7] = Sphere(vec3(9., 0.2, -3.), 0.2, sphere7);
-
-                Material sphere8 = Material(0, vec3(0.3, 0.7, 0.7), 0., 0.);
-                world[8] = Sphere(vec3(-7., 0.5, -4.0), 0.5, sphere8);
-
-                Material sphere9 = Material(1, vec3(1.0, 0.0, 1.0), 0., 0.);
-                world[9] = Sphere(vec3(0., 0.2, 3.0), 0.2, sphere9);
-
-                // Random spheres generation to generate final scene applying all techniques
-                // from raytracing in one weekend (gonna manually generate spheres into world due to performance issues)
-
-                // int index = 3;
-                // vec3 albedo;
-
-                // float fuzz;
-
-                // for (int a = -11; a < 11; a++) {
-                //     for (int b = -11; b < 11; b++) {
-                //         float choose_mat = random_double(st * float((a + 22) + b));
-
-                //         vec3 center = vec3(float(a) + 0.9 * random_double(vec2(st.x + seed + float(a + 11), st.y + seed + float(a + 11))), 
-                //                            0.2, 
-                //                            float(b) + 0.9 * random_double(vec2(st.y + seed + float(b + 11), st.x + seed + float(b + 11))));
-                        
-                //         if (index < MAX_SPHERE)
-                //             if (length(center - vec3(4, 0.2, 0.)) > 0.9) {
-                //                 index++;
-                //                 if (choose_mat < 0.8) {
-                //                     // diffuse sphere
-                //                     albedo = vec3(random_double(center.xy) * random_double(center.yx), random_double(center.yz) * random_double(center.zy), random_double(center.xz) * random_double(center.zx));
-                //                     world[index] = Sphere(center, 0.2, Material(0, albedo, 0., 0.));
-                //                 } else if (choose_mat < 0.95) {
-                //                     // metal sphere
-                //                     albedo = vec3(random_double(center.xy) * random_double(center.yx), random_double(center.yz) * random_double(center.zy), random_double(center.xz) * random_double(center.zx));
-                //                     fuzz = random_double_interval(center.yx, 0.0, 0.5);
-                //                     world[index] = Sphere(center, 0.2, Material(1, albedo, fuzz, 0.0));
-                //                 } else {
-                //                     // glass sphere
-                //                     world[index] = Sphere(center, 0.2, Material(2, vec3(0.0), 0.0, 1.5));
-                //                 }
-                //             }
-                //     }
-                // }
+                // Sphere world[MAX_SPHERE];
 
 
                 // code for interpolating colors
-                Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
-                color = ray_color(ray, world, st);
+                // Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
+                // color = ray_color(ray, world, st);
 
                 // applying linear to gamma correction
-                float r = linear_to_gamma(color.x);
-                float g = linear_to_gamma(color.y);
-                float b = linear_to_gamma(color.z);
+                // float r = linear_to_gamma(color.x);
+                // float g = linear_to_gamma(color.y);
+                // float b = linear_to_gamma(color.z);
 
                 // build color up again with the transformed rgb values
-                color = vec3(r, g, b);
+                // color = vec3(r, g, b);
 
-                pixel_color = vec4(mix(color, tex_color.rgb, cam.texture_weight), 1.0);
+                pixel_color = vec4(mix(color, tex_color.rgb, iteration / (iteration + 1.)), 1.0);
 
                 fragColor = pixel_color;
             }`,
