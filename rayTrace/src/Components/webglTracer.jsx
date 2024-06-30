@@ -3,7 +3,7 @@ import * as twgl from 'twgl.js';
 
 const pixelCode = [
 
-    // uniforms
+    // uniform
     `
     uniform sampler2D u_texture;
     uniform  vec3 camera_center;
