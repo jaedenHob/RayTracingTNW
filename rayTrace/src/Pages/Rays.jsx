@@ -13,7 +13,7 @@ const Rays = () => {
           Both ray tracing and ray casting involve sending rays out through every pixel of an image
           mimmicing the behavior of light. The difference is that ray casting will stop at the first hit,
           while the latter is calculated recursively since when a ray of light hits it reflects or splits
-          many times which is very exspensive computationally. Doing it in 2D also simplifies things as well.
+          many times which is very expensive computationally. Doing it in 2D also simplifies things as well.
         </p>
 
         <br />
