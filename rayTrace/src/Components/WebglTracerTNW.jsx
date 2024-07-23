@@ -800,15 +800,8 @@ const RayTracerTNW = () => {
                 world[9] = Sphere(vec3(0., 0.2, 3.0), 0.2, sphere9);
 
                 // code for interpolating colors
-                // for (float AA = 0.0; AA < SAMPLES_PER_PIXEL; AA += 1.0) {
-                //     Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
-                //     color += ray_color(ray, world, st);
-                // }
-
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
                 color = ray_color(ray, world, st);
-
-                // color *= PIXEL_SAMPLES_SCALE;
 
                 // applying linear to gamma correction
                 float r = linear_to_gamma(color.x);
@@ -818,7 +811,7 @@ const RayTracerTNW = () => {
                 // build color up again with the transformed rgb values
                 color = vec3(r, g, b);
 
-                pixel_color = vec4(mix(color, tex_color.rgb, iteration / (iteration + 1.5)), 1.0);
+                pixel_color = vec4(mix(color, tex_color.rgb, iteration / (iteration + 1.)), 1.0);
 
                 fragColor = pixel_color;
             }`,
@@ -857,8 +850,8 @@ const RayTracerTNW = () => {
             }
 
             // generate seed to give frames variation
-            let seedA = (Math.random() * 9999).toFixed(2);
-            let seedB = (Math.random() * 9999).toFixed(2);
+            let seedA = (Math.random() * 99).toFixed(2);
+            let seedB = (Math.random() * 99).toFixed(2);
             // console.log(seed);
 
             // increment the iteration for new frame
