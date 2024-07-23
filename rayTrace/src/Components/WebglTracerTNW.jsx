@@ -11,7 +11,8 @@ const pixelCode = [
     uniform vec3 pixel_delta_v;
     uniform vec3 pixel00_loc;
     uniform float iteration;
-    uniform float seed;
+    uniform float seedA;
+    uniform float seedB;
     uniform float defocus_angle;
     uniform vec3 defocus_disk_u;
     uniform vec3 defocus_disk_v;
@@ -23,8 +24,9 @@ const pixelCode = [
     #define INFINITY 1.0 / 0.00000000001
     #define MAX_SPHERE 10
     #define RAND_MAX 2147483647.0
-    // #define SAMPLES_PER_PIXEL 100.0
-    #define MAX_RAY_BOUNCES 5
+    #define SAMPLES_PER_PIXEL 10.0
+    #define PIXEL_SAMPLES_SCALE 1.0 / SAMPLES_PER_PIXEL
+    #define MAX_RAY_BOUNCES 10
 
     // values we will use when determining matrial type
     #define LAMBERTIAN 0
@@ -271,7 +273,7 @@ const pixelCode = [
     `
     // returns a vector of random doubles
     vec3 random_vector(vec2 st) {
-        return vec3(random_double(st), random_double(st.xx), random_double(st.yx));
+        return vec3(random_double(st), random_double(st.xx), random_double(st.yy));
     }`,
 
     `
@@ -285,7 +287,7 @@ const pixelCode = [
     `
     // returns a vector to a random point on a unit square
     vec3 sample_square(vec2 st) {
-        return vec3(random_double(st) - seed / 2., random_double(st) - seed / 2., 0);
+        return vec3(random_double(st.xx) - 0.5, random_double(st.yy) - 0.5, 0);
     }`,
 
     `
@@ -302,7 +304,7 @@ const pixelCode = [
             }
 
             tmp = vec2(tmp.x + i, tmp.y + i);
-            i += seed;
+            i += seedA;
         }
     }`,
 
@@ -313,14 +315,14 @@ const pixelCode = [
         vec2 tmp = st;
 
         while(true) {
-            vec3 p = vec3(random_double_interval(tmp, -1.0, 1.0), random_double_interval(tmp * (seed + 2.), -1.0, 1.0), 0);
+            vec3 p = vec3(random_double_interval(tmp, -1.0, 1.0), random_double_interval(tmp * (seedA + 2.), -1.0, 1.0), 0);
             
             if (dot(p, p) < 1.) {
                 return p;
             }
 
             tmp = vec2(tmp.x + i, tmp.y + i);
-            i += seed;
+            i += seedB;
         }
     }`,
 
@@ -753,7 +755,7 @@ const RayTracerTNW = () => {
                 vec4 pixel_color;
 
                 // postion on frament used as seeding for rnadom numbers
-                vec2 st = vec2(float(gl_FragCoord.x + seed), float(gl_FragCoord.y + seed));
+                vec2 st = vec2(float(gl_FragCoord.x + seedA), float(gl_FragCoord.y + seedB));
                 
                 // setting up camera
                 Camera cam = Camera((iteration / (iteration + 1.)), camera_center, pixel_delta_u, pixel_delta_v, pixel00_loc);
@@ -798,8 +800,15 @@ const RayTracerTNW = () => {
                 world[9] = Sphere(vec3(0., 0.2, 3.0), 0.2, sphere9);
 
                 // code for interpolating colors
+                // for (float AA = 0.0; AA < SAMPLES_PER_PIXEL; AA += 1.0) {
+                //     Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
+                //     color += ray_color(ray, world, st);
+                // }
+
                 Ray ray = get_ray(vec2(float(gl_FragCoord.x), float(gl_FragCoord.y)), st);
                 color = ray_color(ray, world, st);
+
+                // color *= PIXEL_SAMPLES_SCALE;
 
                 // applying linear to gamma correction
                 float r = linear_to_gamma(color.x);
@@ -809,7 +818,7 @@ const RayTracerTNW = () => {
                 // build color up again with the transformed rgb values
                 color = vec3(r, g, b);
 
-                pixel_color = vec4(mix(color, tex_color.rgb, cam.texture_weight), 1.0);
+                pixel_color = vec4(mix(color, tex_color.rgb, iteration / (iteration + 1.5)), 1.0);
 
                 fragColor = pixel_color;
             }`,
@@ -848,8 +857,9 @@ const RayTracerTNW = () => {
             }
 
             // generate seed to give frames variation
-            let seed = (Math.random() * 1.).toFixed(2);
-            // console.log(seed / 2.5);
+            let seedA = (Math.random() * 9999).toFixed(2);
+            let seedB = (Math.random() * 9999).toFixed(2);
+            // console.log(seed);
 
             // increment the iteration for new frame
             iteration++;
@@ -862,7 +872,8 @@ const RayTracerTNW = () => {
                 pixel00_loc: pixel00_loc,
                 u_texture: fb1.attachments[0],
                 iteration: parseFloat(iteration),
-                seed: seed,
+                seedA: seedA,
+                seedB: seedB,
                 defocus_angle: defocus_angle,
                 defocus_disk_u: defocus_disk_u,
                 defocus_disk_v: defocus_disk_v
