@@ -8,7 +8,7 @@ const Home = () => {
 
         <br /> 
         
-        <h1>Ray Tracing Project</h1>
+        <h1>RayTracing The Next Weekend Project</h1>
 
         <br />
 
@@ -17,13 +17,12 @@ const Home = () => {
         <br />
 
         <p>
-          After my computer graphics course in college I enjoyed the process of designing a game using all
-          the techniques that was learned. However, I felt that there was a valuable learning  experience I missed
-          out on building a ray tracer. So this project will aim to do just that. My process begun by reading
-          up on it in {" "}
-          <a href='https://raytracing.github.io/books/RayTracingInOneWeekend.html#overview'>ray tracing in one weekend</a>.  The reference material is in C++, but I will stick to what
-          I'm accustomed  to with javascript and webgl. Ray tracing is a complex subject so I don't expect
-          to complete this in one weekend, but lets see I how far I can get.
+          So I have completed my version of ray tracing in one weekend using react and webgl to then Render
+          a scene of spheres of varying material and colors. I want something that renders on the browser
+          while also being accessible to devices that don't have an overly powerful GPU. My first attempt 
+          I would say is successful, but there are areas that are lacking in optimization that I feel can
+          be improved which I want to accomplish before moving onto some more challenging concepts such as,
+          lights, motion blure, perlin noise.
         </p>
       </div>
   );

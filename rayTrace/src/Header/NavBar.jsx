@@ -49,14 +49,6 @@ const NavBar = () => {
                 color="blue-gray"
                 className="p-1 font-normal"
             >
-                <NavLink to="/shadows">2D Shadows</NavLink>
-            </Typography>
-            <Typography
-                as="li"
-                variant="small"
-                color="blue-gray"
-                className="p-1 font-normal"
-            >
                 <NavLink to="/ping">Ping Pong</NavLink>
             </Typography>
             <Typography
@@ -65,7 +57,7 @@ const NavBar = () => {
                 color="blue-gray"
                 className="p-1 font-normal"
             >
-                <NavLink to="/InOneWeekend">Webgl Ray Tracer</NavLink>
+                <NavLink to="/InOneWeekend">Raytracing in one weekened</NavLink>
             </Typography>
 
             <Typography
@@ -74,7 +66,7 @@ const NavBar = () => {
                 color="blue-gray"
                 className="p-1 font-normal"
             >
-                <NavLink to="/NextWeekend">The Next Weekend</NavLink>
+                <NavLink to="/NextWeekend">Raytracing: The Next Weekend</NavLink>
             </Typography>
         </ul>
     );
