@@ -197,7 +197,7 @@ void main() {
 }`;
 
 // drawing particles
-const vDraw = `#version 300 es
+const v_Draw = `#version 300 es
     precision mediump float;
 
     in vec2 vPosition;
@@ -207,7 +207,7 @@ const vDraw = `#version 300 es
     texCoord = (vPosition+1.)/2.;
     gl_Position = vec4(vPosition, 0., 1.0);
     }`;
-const fDraw = `#version 300 es
+const f_Draw = `#version 300 es
     precision mediump float;
     in vec2 texCoord;
     out vec4 fragColor;
@@ -217,7 +217,7 @@ const fDraw = `#version 300 es
     }`;
 
 // update information
-const vUpdate = `#version 300 es
+const v_Update = `#version 300 es
     precision mediump float;
 
     in vec2 position;
@@ -228,7 +228,7 @@ const vUpdate = `#version 300 es
       gl_Position = vec4(position, 0.0, 1.0);
     }`;
 
-const fUpdate = `#version 300 es
+const f_Update = `#version 300 es
     precision mediump float;
     in vec2 v_texcoord;
     uniform sampler2D u_texture;
@@ -243,7 +243,7 @@ const fUpdate = `#version 300 es
     }`;
 
 // initilization
-const vInit = `
+const v_Init = `
     #version 300 es
     precision mediump float;
     in vec2 position;
@@ -254,7 +254,7 @@ const vInit = `
         gl_Position = vec4(position, 0.0, 1.0);
     }`;
 
-const fInit = `
+const f_Init = `
     #version 300 es
     precision mediump float;
     in vec2 v_position;
@@ -266,10 +266,10 @@ const fInit = `
 export default {
   ray_tracer_vs,
   ray_tracer_fs,
-  vDraw,
-  fDraw,
-  vUpdate,
-  fUpdate,
-  vInit,
-  fInit,
+  v_Draw,
+  f_Draw,
+  v_Update,
+  f_Update,
+  v_Init,
+  f_Init,
 };

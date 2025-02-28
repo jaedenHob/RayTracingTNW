@@ -66,6 +66,21 @@ const Raytrace = () => {
       shaders.ray_tracer_fs,
     ]);
 
+    const initProgram_info = twgl.createProgramInfo(gl, [
+      shaders.v_Init,
+      shaders.f_Init,
+    ]);
+
+    const drawProgram_info = twgl.createProgramInfo(gl, [
+      shaders.v_Draw,
+      shaders.f_Draw,
+    ]);
+
+    const updateProgram_info = twgl.createProgramInfo(gl, [
+      shaders.v_Update,
+      shaders.f_Update,
+    ]);
+
     const arrays = {
       position: { numComponents: 2, data: [-1, -1, 1, -1, 1, 1, -1, 1] },
       indices: { data: [0, 1, 2, 2, 3, 0] },
@@ -82,11 +97,71 @@ const Raytrace = () => {
       camera_center: new Float32Array(camera_center), // Float32Array for camera center
     };
 
-    gl.useProgram(ray_tracer_programinfo.program);
+    // create 2 buffers to swap generated frame and saved texture
+    let frame_buffer1 = twgl.createFramebufferInfo(
+        gl,
+        undefined,
+        width,
+        image_height
+      ),
+      frame_buffer2 = twgl.createFramebufferInfo(
+        gl,
+        undefined,
+        width,
+        image_height
+      ),
+      temp = null;
 
-    twgl.setBuffersAndAttributes(gl, ray_tracer_programinfo, buffer_info);
+    // particle initialization
+    gl.useProgram(initProgram_info.program);
+    twgl.setBuffersAndAttributes(gl, initProgram_info, buffer_info);
+    twgl.bindFramebufferInfo(gl, frame_buffer1);
+    twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
 
-    twgl.setUniforms(ray_tracer_programinfo, uniforms);
+    function render() {
+      twgl.resizeCanvasToDisplaySize(gl.canvas);
+      gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+
+      // drawing frame
+      gl.useProgram(drawProgram_info.program);
+
+      twgl.setBuffersAndAttributes(gl, drawProgram_info, buffer_info);
+      twgl.setUniforms(drawProgram_info, {
+        u_texture: frame_buffer1.attachments[0],
+      });
+
+      twgl.bindFramebufferInfo(gl, null);
+
+      twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
+
+      // update frame
+      gl.useProgram(updateProgram_info.program);
+
+      twgl.setBuffersAndAttributes(gl, updateProgram_info, buffer_info);
+
+      twgl.setUniforms(updateProgram_info, {
+        u_texture: frame_buffer1.attachments[0],
+      });
+
+      twgl.bindFramebufferInfo(gl, frame_buffer2);
+      twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
+
+      // ping-pong buffers
+      temp = frame_buffer1;
+      frame_buffer1 = frame_buffer2;
+      frame_buffer2 = temp;
+
+      requestAnimationFrame(render);
+    }
+
+    requestAnimationFrame(render);
+
+    // raytracer drawing
+    // gl.useProgram(ray_tracer_programinfo.program);
+
+    // twgl.setBuffersAndAttributes(gl, ray_tracer_programinfo, buffer_info);
+
+    // twgl.setUniforms(ray_tracer_programinfo, uniforms);
 
     // Draw scene
     twgl.drawBufferInfo(gl, buffer_info);
