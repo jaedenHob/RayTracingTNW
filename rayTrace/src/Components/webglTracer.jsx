@@ -12,6 +12,9 @@ const Raytrace = () => {
 
   var width = 400;
 
+  // frame counts
+  const [frame_count, setFrameCount] = useState(1);
+
   useEffect(() => {
     //   image
     let aspect_ratio = 16.0 / 9.0;
@@ -78,7 +81,7 @@ const Raytrace = () => {
 
     const updateProgram_info = twgl.createProgramInfo(gl, [
       shaders.v_Update,
-      shaders.f_Update,
+      shaders.f_update_tracer,
     ]);
 
     const arrays = {
@@ -95,6 +98,8 @@ const Raytrace = () => {
       pixel_delta_u: new Float32Array(pixel_delta_u), // Float32Array for delta
       pixel_delta_v: new Float32Array(pixel_delta_v), // Float32Array for delta
       camera_center: new Float32Array(camera_center), // Float32Array for camera center
+      u_texture: null, // for when we pass in previous frame as a texture
+      iteration: null,
     };
 
     // create 2 buffers to swap generated frame and saved texture
@@ -118,31 +123,31 @@ const Raytrace = () => {
     twgl.bindFramebufferInfo(gl, frame_buffer1);
     twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
 
+    requestAnimationFrame(render);
+
     function render() {
+      // update current frame iteration
+      setFrameCount((previous_count) => previous_count + 1);
+
       twgl.resizeCanvasToDisplaySize(gl.canvas);
       gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
       // drawing frame
       gl.useProgram(drawProgram_info.program);
-
       twgl.setBuffersAndAttributes(gl, drawProgram_info, buffer_info);
       twgl.setUniforms(drawProgram_info, {
         u_texture: frame_buffer1.attachments[0],
       });
-
       twgl.bindFramebufferInfo(gl, null);
-
       twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
 
       // update frame
       gl.useProgram(updateProgram_info.program);
-
       twgl.setBuffersAndAttributes(gl, updateProgram_info, buffer_info);
 
-      twgl.setUniforms(updateProgram_info, {
-        u_texture: frame_buffer1.attachments[0],
-      });
-
+      uniforms.u_texture = frame_buffer1.attachments[0];
+      uniforms.iteration = frame_count;
+      twgl.setUniforms(updateProgram_info, uniforms);
       twgl.bindFramebufferInfo(gl, frame_buffer2);
       twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
 
@@ -153,18 +158,6 @@ const Raytrace = () => {
 
       requestAnimationFrame(render);
     }
-
-    requestAnimationFrame(render);
-
-    // raytracer drawing
-    // gl.useProgram(ray_tracer_programinfo.program);
-
-    // twgl.setBuffersAndAttributes(gl, ray_tracer_programinfo, buffer_info);
-
-    // twgl.setUniforms(ray_tracer_programinfo, uniforms);
-
-    // Draw scene
-    twgl.drawBufferInfo(gl, buffer_info);
   }, []);
 
   const [slider_values, set_slider_values] = useState({
@@ -187,6 +180,12 @@ const Raytrace = () => {
       <div className="centered-container">
         <div>
           fps: <span id="fps"></span>
+        </div>
+
+        <div>
+          <div>
+            Current frame: <span id="curr_frame">{frame_count}</span>
+          </div>
         </div>
 
         <canvas
