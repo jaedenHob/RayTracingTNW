@@ -247,13 +247,15 @@ uniform vec3 pixel00_loc;
 uniform vec3 pixel_delta_u;
 uniform vec3 pixel_delta_v;
 uniform vec3 camera_center;
+uniform float seed;
+uniform float texture_weight;
 
 // constants
 #define PI 3.1415926538
 #define INFINITY 1.0 / 0.00000000001
 #define MAX_SPHERE 2
 #define RAND_MAX 2147483647.0
-#define SAMPLES_PER_PIXEL 100.0
+#define SAMPLES_PER_PIXEL 5
 #define MAX_RAY_BOUNCES 5
 
 // auxilary functions
@@ -400,12 +402,45 @@ vec3 ray_color(Ray r, Sphere world[MAX_SPHERE]) {
     return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
 }
 
+// returns a random float value from [0, 1)
+float rand() {
+    vec3 scale = vec3(12.9898, 78.233, 45.164);
+    return fract(sin(dot(gl_FragCoord.xyz + seed, scale)) * 43758.5453 + seed);
+}
+
+// returns a vector of random doubles
+float random_double() {
+    return rand();
+}
+
+// returns a vector of random doubles within a range
+float random_double_interval(vec2 st, float min, float max) {
+    return min + (max - min) * random_double();
+}
+
+vec3 sample_square() {
+    // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
+    return vec3(random_double() - 0.5, random_double() - 0.5, 0.);
+}
+
+// create a ray randomly within a region around a target pixel
+Ray get_ray() {
+    // Construct a camera ray originating from the origin and directed at randomly sampled
+    // point around the pixel location x, y.
+
+    vec3 offset = sample_square();
+
+    vec3 pixel_sample = pixel00_loc + ((gl_FragCoord.x + offset.x) * pixel_delta_u) + ((gl_FragCoord.y + offset.y) * pixel_delta_v);
+
+    vec3 ray_origin = camera_center;
+    vec3 ray_direction = pixel_sample - ray_origin;
+
+    return Ray(ray_origin, ray_direction);
+
+}
+
 void main() {
-    // vec4 texColor = texture(u_texture, v_texcoord);
-    // float r = texColor.r+0.004; if (r > 1.) r = 0.;
-    // float g = texColor.g+0.004; if (g > 1.) g = 0.;
-    // float b = 0.;//texColor.b+0.01; if (b > 1.) b = 0.;
-    // fragColor = vec4(r,g,b,1.0);
+    vec4 tex_color = texture(u_texture, v_texcoord);
 
     // generate the world
     Sphere world[MAX_SPHERE];
@@ -416,13 +451,15 @@ void main() {
     world[1] = Sphere(vec3(0., 0., -1.), 0.5);
     
 
-    vec3 pixel_center = pixel00_loc + (gl_FragCoord.x * pixel_delta_u) + (gl_FragCoord.y * pixel_delta_v);
-    vec3 ray_direction = pixel_center - camera_center;
-    Ray r = Ray(camera_center, ray_direction);
+    // vec3 pixel_center = pixel00_loc + (gl_FragCoord.x * pixel_delta_u) + (gl_FragCoord.y * pixel_delta_v);
+    // vec3 ray_direction = pixel_center - camera_center;
+    
+    // create a ray in a random direction
+    Ray r = get_ray();
 
     vec3 pixel_color = ray_color(r, world);
 
-    fragColor = vec4(pixel_color, 1.);
+    fragColor = vec4(mix(pixel_color, tex_color.rgb, texture_weight), 1.0);
 }`;
 
 const f_Update = `

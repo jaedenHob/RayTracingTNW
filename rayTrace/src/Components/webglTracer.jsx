@@ -14,6 +14,7 @@ const Raytrace = () => {
 
   // frame counts
   const [frame_count, setFrameCount] = useState(1);
+  let iteration = 1;
 
   useEffect(() => {
     //   image
@@ -92,6 +93,8 @@ const Raytrace = () => {
     // setup for scene creation
     const buffer_info = twgl.createBufferInfoFromArrays(gl, arrays);
 
+    let random_seed = Math.random() * 1000.0;
+
     // uniforms
     let uniforms = {
       pixel00_loc: new Float32Array(pixel00_loc), // Ensure it's a Float32Array
@@ -99,7 +102,8 @@ const Raytrace = () => {
       pixel_delta_v: new Float32Array(pixel_delta_v), // Float32Array for delta
       camera_center: new Float32Array(camera_center), // Float32Array for camera center
       u_texture: null, // for when we pass in previous frame as a texture
-      iteration: null,
+      texture_weight: parseFloat(iteration / (iteration + 1)),
+      seed: random_seed,
     };
 
     // create 2 buffers to swap generated frame and saved texture
@@ -129,6 +133,9 @@ const Raytrace = () => {
       // update current frame iteration
       setFrameCount((previous_count) => previous_count + 1);
 
+      // change seed every cycle
+      random_seed = Math.random() * 1000.0;
+
       twgl.resizeCanvasToDisplaySize(gl.canvas);
       gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -146,10 +153,16 @@ const Raytrace = () => {
       twgl.setBuffersAndAttributes(gl, updateProgram_info, buffer_info);
 
       uniforms.u_texture = frame_buffer1.attachments[0];
-      uniforms.iteration = frame_count;
+      uniforms.seed = random_seed;
+      uniforms.texture_weight = parseFloat(iteration / (iteration + 1));
       twgl.setUniforms(updateProgram_info, uniforms);
       twgl.bindFramebufferInfo(gl, frame_buffer2);
       twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
+
+      // increment iteration
+      iteration++;
+
+      console.log(iteration);
 
       // ping-pong buffers
       temp = frame_buffer1;
@@ -158,6 +171,32 @@ const Raytrace = () => {
 
       requestAnimationFrame(render);
     }
+
+    // // for debugging after 1 cycle
+
+    // // update frame
+    // gl.useProgram(updateProgram_info.program);
+    // twgl.setBuffersAndAttributes(gl, updateProgram_info, buffer_info);
+
+    // uniforms.u_texture = frame_buffer1.attachments[0];
+    // uniforms.iteration = frame_count;
+    // twgl.setUniforms(updateProgram_info, uniforms);
+    // twgl.bindFramebufferInfo(gl, frame_buffer2);
+    // twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
+
+    // // ping-pong buffers
+    // temp = frame_buffer1;
+    // frame_buffer1 = frame_buffer2;
+    // frame_buffer2 = temp;
+
+    // // drawing frame
+    // gl.useProgram(drawProgram_info.program);
+    // twgl.setBuffersAndAttributes(gl, drawProgram_info, buffer_info);
+    // twgl.setUniforms(drawProgram_info, {
+    //   u_texture: frame_buffer1.attachments[0],
+    // });
+    // twgl.bindFramebufferInfo(gl, null);
+    // twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
   }, []);
 
   const [slider_values, set_slider_values] = useState({
