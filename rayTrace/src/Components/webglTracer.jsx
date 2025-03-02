@@ -16,6 +16,10 @@ const Raytrace = () => {
   const [frame_count, setFrameCount] = useState(1);
   let iteration = 1;
 
+  let start = new Date();
+
+  // console.log(start);
+
   useEffect(() => {
     //   image
     let aspect_ratio = 16.0 / 9.0;
@@ -99,6 +103,8 @@ const Raytrace = () => {
       u_texture: null, // for when we pass in previous frame as a texture
       texture_weight: parseFloat(iteration / (iteration + 1)),
       seed: random_seed,
+      time_since_start: null,
+      iteration: null,
     };
 
     // create 2 buffers to swap generated frame and saved texture
@@ -150,6 +156,9 @@ const Raytrace = () => {
       uniforms.u_texture = frame_buffer1.attachments[0];
       uniforms.seed = random_seed;
       uniforms.texture_weight = parseFloat(iteration / (iteration + 1));
+      uniforms.time_since_start = parseFloat(new Date() - start);
+      uniforms.iteration = parseFloat(iteration);
+
       twgl.setUniforms(updateProgram_info, uniforms);
       twgl.bindFramebufferInfo(gl, frame_buffer2);
       twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
@@ -157,18 +166,19 @@ const Raytrace = () => {
       // increment iteration
       iteration++;
 
-      // console.log(iteration);
-
       // ping-pong buffers
       temp = frame_buffer1;
       frame_buffer1 = frame_buffer2;
       frame_buffer2 = temp;
 
-      setTimeout(() => {
-        requestAnimationFrame(render);
-        // console.log("This message appears after 2 seconds.");
-      }, 1000);
-      // requestAnimationFrame(render);
+      // run loop at a reduced speed
+      // setTimeout(() => {
+      //   requestAnimationFrame(render);
+      //   // console.log("This message appears after 2 seconds.");
+      // }, 250);
+
+      // run loop at full speed
+      requestAnimationFrame(render);
     }
   }, []);
 

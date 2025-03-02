@@ -50,6 +50,9 @@ uniform vec3 pixel_delta_v;
 uniform vec3 camera_center;
 uniform float seed;
 uniform float texture_weight;
+uniform float time_since_start;
+uniform float iteration;
+
 
 // constants
 #define PI 3.1415926538
@@ -62,6 +65,14 @@ uniform float texture_weight;
 // auxilary functions
 float degrees_to_radians(float degrees) {
     return degrees * PI / 180.;
+}
+
+// gamma correction function
+float linear_to_gamma(float linear_component) {
+    if (linear_component > 0.0)
+        return sqrt(linear_component);
+
+    return 0.0;
 }
 
 // structs
@@ -192,24 +203,24 @@ bool hit_list(Sphere world[MAX_SPHERE], Ray r, interval ray_t, out hit_record re
 }
 
 // returns a random float value from [0, 1)
-float rand(float offset) {
+float rand(float offset, vec3 scale) {
     float a = 12.9898;
     float b = 78.233;
     float c = 43758.5453;
-    float dt = dot(gl_FragCoord.xyz + seed, vec3(a, b, 45.164));
+    float dt = dot(gl_FragCoord.xyz + seed, scale);
     float sn = mod(dt + offset, PI);
 
     return fract(sin(sn) * c);
 }
 
 // returns a vector of random doubles
-float random_double(float offset) {
-    return rand(offset);
+float random_double(float offset, vec3 scale) {
+    return rand(offset, scale);
 }
 
 // returns a vector of random doubles within a set bounds
-float random_double_interval(float min, float max, float offset) {
-    return min + (max - min) * rand(offset);
+float random_double_interval(float min, float max, float offset, vec3 scale) {
+    return min + (max - min) * random_double(offset, scale);
 }
 
 // random vec3 vector that bounces off the surface of 
@@ -218,9 +229,9 @@ vec3 random_unit_vector() {
     float delta = 1.5;
     while(true) {
         vec3 p = vec3(
-            random_double_interval(-1., 1., delta),
-            random_double_interval(-1., 1., delta * 2.2),
-            random_double_interval(-1., 1., delta / 0.45)
+            random_double_interval(-1., 1., delta, vec3(63.186, 5.183 * delta, 91.453)),
+            random_double_interval(-1., 1., delta * 2.2, vec3(12.678 * delta, 19.111, 69.153)),
+            random_double_interval(-1., 1., delta / 0.45, vec3(44.010, 56.565 * delta, 82.379))
         );
 
         float lensq = dot(p, p);
@@ -245,8 +256,8 @@ vec3 random_on_hemisphere(vec3 normal) {
 // Returns the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
 vec3 sample_square() {
     return vec3(
-        random_double(0.51) - 0.5,
-        random_double(1.23) - 0.5,
+        random_double(0.51, vec3(12.9898, 78.233, 45.164)) - 0.5,
+        random_double(1.23, vec3(25.812, 33.419, 82.713)) - 0.5,
         0.
     );
 }
@@ -267,17 +278,40 @@ Ray get_ray() {
 
 }
 
+vec3 cosine_weighted_direction(float time_seed, vec3 normal) {
+    float u = random_double(time_seed, vec3(12.9898, 78.233, 151.7182));
+    float v = random_double(time_seed, vec3(63.7264, 10.873, 623.6736));
+    float r = sqrt(u);
+    float angle = 6.283185307179586 * v;
+
+    // compute basis from normal
+    vec3 sdir, tdir;
+
+    if (abs(normal.x) < 0.5) {
+        sdir = cross(normal, vec3(1., 0., 0.));
+    } else {
+        sdir = cross(normal, vec3(0., 1., 0.));
+    }
+
+    tdir = cross(normal, sdir);
+
+    return r * cos(angle) * sdir + r * sin(angle) * tdir + sqrt(1. - u) * normal;
+}
+
 vec3 ray_color(Ray r, Sphere world[MAX_SPHERE]) {
     hit_record rec;
 
     Ray current_ray = r;
 
-    vec3 color = vec3(0.1);
+    vec3 color = vec3(1.);
 
     for (int bounce = 0; bounce < MAX_RAY_BOUNCES; bounce++) {
         if (hit_list(world, current_ray, interval(0., INFINITY), rec)) {
-            vec3 direction = random_on_hemisphere(rec.normal);
-            current_ray = Ray(rec.p, direction);
+            // vec3 direction = random_on_hemisphere(rec.normal);
+            // current_ray = Ray(rec.p, direction);
+
+            // testing new method
+            current_ray = Ray(rec.p, cosine_weighted_direction(time_since_start + float(bounce), rec.normal));
 
             color *= 0.5;
 
@@ -308,9 +342,16 @@ void main() {
     // vec3 ray_direction = pixel_center - camera_center;
     
     // create a ray in a random direction
-    Ray r = get_ray();
+    Ray ray = get_ray();
 
-    vec3 pixel_color = ray_color(r, world);
+    vec3 color = ray_color(ray, world);
+
+    // applying linear to gamma correction
+    float r = linear_to_gamma(color.x);
+    float g = linear_to_gamma(color.y);
+    float b = linear_to_gamma(color.z);
+
+    vec3 pixel_color = vec3(r, g, b);
 
     fragColor = vec4(mix(pixel_color, tex_color.rgb, texture_weight), 1.0);
 }`;
