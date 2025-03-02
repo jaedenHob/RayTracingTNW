@@ -65,11 +65,6 @@ const Raytrace = () => {
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
-    const ray_tracer_programinfo = twgl.createProgramInfo(gl, [
-      shaders.ray_tracer_vs,
-      shaders.ray_tracer_fs,
-    ]);
-
     const initProgram_info = twgl.createProgramInfo(gl, [
       shaders.v_Init,
       shaders.f_Init,
@@ -162,41 +157,19 @@ const Raytrace = () => {
       // increment iteration
       iteration++;
 
-      console.log(iteration);
+      // console.log(iteration);
 
       // ping-pong buffers
       temp = frame_buffer1;
       frame_buffer1 = frame_buffer2;
       frame_buffer2 = temp;
 
-      requestAnimationFrame(render);
+      setTimeout(() => {
+        requestAnimationFrame(render);
+        // console.log("This message appears after 2 seconds.");
+      }, 1000);
+      // requestAnimationFrame(render);
     }
-
-    // // for debugging after 1 cycle
-
-    // // update frame
-    // gl.useProgram(updateProgram_info.program);
-    // twgl.setBuffersAndAttributes(gl, updateProgram_info, buffer_info);
-
-    // uniforms.u_texture = frame_buffer1.attachments[0];
-    // uniforms.iteration = frame_count;
-    // twgl.setUniforms(updateProgram_info, uniforms);
-    // twgl.bindFramebufferInfo(gl, frame_buffer2);
-    // twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
-
-    // // ping-pong buffers
-    // temp = frame_buffer1;
-    // frame_buffer1 = frame_buffer2;
-    // frame_buffer2 = temp;
-
-    // // drawing frame
-    // gl.useProgram(drawProgram_info.program);
-    // twgl.setBuffersAndAttributes(gl, drawProgram_info, buffer_info);
-    // twgl.setUniforms(drawProgram_info, {
-    //   u_texture: frame_buffer1.attachments[0],
-    // });
-    // twgl.bindFramebufferInfo(gl, null);
-    // twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
   }, []);
 
   const [slider_values, set_slider_values] = useState({
