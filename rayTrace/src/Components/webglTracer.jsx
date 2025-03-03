@@ -10,11 +10,11 @@ const Raytrace = () => {
   // canvas reference
   const canvas_ref = useRef(null);
 
-  var width = 400;
+  var width = 450;
 
   // frame counts
   const [frame_count, setFrameCount] = useState(1);
-  let iteration = 1;
+  let iteration = 0;
 
   let start = new Date();
 
@@ -92,8 +92,6 @@ const Raytrace = () => {
     // setup for scene creation
     const buffer_info = twgl.createBufferInfoFromArrays(gl, arrays);
 
-    let random_seed = Math.random() * 1000.0;
-
     // uniforms
     let uniforms = {
       pixel00_loc: new Float32Array(pixel00_loc), // Ensure it's a Float32Array
@@ -102,7 +100,7 @@ const Raytrace = () => {
       camera_center: new Float32Array(camera_center), // Float32Array for camera center
       u_texture: null, // for when we pass in previous frame as a texture
       texture_weight: parseFloat(iteration / (iteration + 1)),
-      seed: random_seed,
+      seed: null,
       time_since_start: null,
       iteration: null,
     };
@@ -131,11 +129,14 @@ const Raytrace = () => {
     requestAnimationFrame(render);
 
     function render() {
+      // increment iteration
+      iteration++;
+
       // update current frame iteration
       setFrameCount((previous_count) => previous_count + 1);
 
       // change seed every cycle
-      random_seed = Math.random() * 1000.0;
+      let random_seed = Math.random() * 1000;
 
       twgl.resizeCanvasToDisplaySize(gl.canvas);
       gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -154,7 +155,7 @@ const Raytrace = () => {
       twgl.setBuffersAndAttributes(gl, updateProgram_info, buffer_info);
 
       uniforms.u_texture = frame_buffer1.attachments[0];
-      uniforms.seed = random_seed;
+      uniforms.seed = parseFloat(random_seed);
       uniforms.texture_weight = parseFloat(iteration / (iteration + 1));
       uniforms.time_since_start = parseFloat(new Date() - start);
       uniforms.iteration = parseFloat(iteration);
@@ -163,22 +164,20 @@ const Raytrace = () => {
       twgl.bindFramebufferInfo(gl, frame_buffer2);
       twgl.drawBufferInfo(gl, buffer_info, gl.TRIANGLE_FAN);
 
-      // increment iteration
-      iteration++;
-
       // ping-pong buffers
       temp = frame_buffer1;
       frame_buffer1 = frame_buffer2;
       frame_buffer2 = temp;
 
       // run loop at a reduced speed
-      // setTimeout(() => {
-      //   requestAnimationFrame(render);
-      //   // console.log("This message appears after 2 seconds.");
-      // }, 250);
+      setTimeout(() => {
+        requestAnimationFrame(render);
+        console.log(uniforms.seed);
+      }, 1500);
 
       // run loop at full speed
-      requestAnimationFrame(render);
+      // requestAnimationFrame(render);
+      // console.log(uniforms.seed);
     }
   }, []);
 
