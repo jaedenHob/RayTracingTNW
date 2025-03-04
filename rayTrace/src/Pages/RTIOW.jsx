@@ -18,10 +18,8 @@ const RTIOW = () => {
           Final render of the scene with slider components that allow the user
           to see different angles in real time. Still takes a load on a
           computers gpu. If the frames ever get to low refreshing the page
-          helps. New approach where instead of running everything only the gpu
-          to incorporate some calculations on the cpu through javascript. Makes
-          less workload on GPU an hopefull prevents some artifacts that appear
-          if random number are not generated properly.
+          helps. New approach on my progressive render was using a whole new way
+          of random number generation with a varying global seed among pixels.
         </p>
       </div>
     </>

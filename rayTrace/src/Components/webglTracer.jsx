@@ -16,10 +16,6 @@ const Raytrace = () => {
   const [frame_count, setFrameCount] = useState(1);
   let iteration = 0;
 
-  let start = new Date();
-
-  // console.log(start);
-
   useEffect(() => {
     //   image
     let aspect_ratio = 16.0 / 9.0;
@@ -100,9 +96,8 @@ const Raytrace = () => {
       camera_center: new Float32Array(camera_center), // Float32Array for camera center
       u_texture: null, // for when we pass in previous frame as a texture
       texture_weight: parseFloat(iteration / (iteration + 1)),
-      seed: null,
-      time_since_start: null,
-      iteration: null,
+      seedA: null,
+      seedB: null,
     };
 
     // create 2 buffers to swap generated frame and saved texture
@@ -136,7 +131,8 @@ const Raytrace = () => {
       setFrameCount((previous_count) => previous_count + 1);
 
       // change seed every cycle
-      let random_seed = Math.random() * 1000;
+      let random_seedA = Math.random() * 1000;
+      let random_seedB = Math.random() * (750 - 250) + 250;
 
       twgl.resizeCanvasToDisplaySize(gl.canvas);
       gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
@@ -155,10 +151,9 @@ const Raytrace = () => {
       twgl.setBuffersAndAttributes(gl, updateProgram_info, buffer_info);
 
       uniforms.u_texture = frame_buffer1.attachments[0];
-      uniforms.seed = parseFloat(random_seed);
+      uniforms.seedA = parseFloat(random_seedA);
+      uniforms.seedB = parseFloat(random_seedB);
       uniforms.texture_weight = parseFloat(iteration / (iteration + 1));
-      uniforms.time_since_start = parseFloat(new Date() - start);
-      uniforms.iteration = parseFloat(iteration);
 
       twgl.setUniforms(updateProgram_info, uniforms);
       twgl.bindFramebufferInfo(gl, frame_buffer2);
@@ -169,11 +164,21 @@ const Raytrace = () => {
       frame_buffer1 = frame_buffer2;
       frame_buffer2 = temp;
 
-      // run loop at a reduced speed
+      // // run loop at a reduced speed (30 fps)
       setTimeout(() => {
+        console.log(
+          "seed A: " + uniforms.seedA + "\nseed B: " + uniforms.seedB
+        );
         requestAnimationFrame(render);
-        console.log(uniforms.seed);
-      }, 1500);
+      }, 250);
+
+      // run loop at a reduced speed (1 frame every 2 seconds)
+      // setTimeout(() => {
+      //   requestAnimationFrame(render);
+      //   console.log(
+      //     "seed A: " + uniforms.seedA + "\nseed B: " + uniforms.seedB
+      //   );
+      // }, 2000);
 
       // run loop at full speed
       // requestAnimationFrame(render);

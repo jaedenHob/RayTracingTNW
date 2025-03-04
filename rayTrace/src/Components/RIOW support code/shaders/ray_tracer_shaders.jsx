@@ -1,202 +1,3 @@
-// ray tracer logic however this will be discontinued and placed inside update shader
-const ray_tracer_vs = `
-#version 300 es
-precision mediump float;
-
-in vec2 position;
-
-out vec2 v_position;
-
-void main() {
-    v_position = 0.5 * position + 0.5;
-    gl_Position = vec4(position, 0.0, 1.0);
-}`;
-
-const ray_tracer_fs = `
-#version 300 es
-precision mediump float;
-
-in vec2 v_position;
-
-out vec4 fragColor;
-
-// uniforms
-uniform vec3 pixel00_loc; 
-uniform vec3 pixel_delta_u;
-uniform vec3 pixel_delta_v;
-uniform vec3 camera_center;
-
-// constants
-#define PI 3.1415926538
-#define INFINITY 1.0 / 0.00000000001
-#define MAX_SPHERE 2
-#define RAND_MAX 2147483647.0
-#define SAMPLES_PER_PIXEL 100.0
-#define MAX_RAY_BOUNCES 5
-
-// auxilary functions
-float degrees_to_radians(float degrees) {
-    return degrees * PI / 180.;
-}
-
-// structs
-
-// defining a ray
-struct Ray {
-    vec3 origin;
-    vec3 direction;
-};
-
-// defining records of what rays hit
-struct hit_record {
-    vec3 p;
-    vec3 normal;
-    
-    float t;
-
-    bool front_face;
-};
-
-// defining a sphere
-struct Sphere {
-    vec3 center;
-
-    float radius;
-};
-
-// defining an interval
-struct interval {
-    float min;
-    float max;
-};
-
-// interval functions
-
-// check interval size
-float interval_size(interval t) {
-    return t.max - t.min;
-}
-
-// check if t for a ray is within acceptable range
-bool interval_contains(float x, interval t) {
-    return t.min <= x && x <= t.max;
-}
-
-// check if t for a ray is within acceptable range
-bool interval_surrounds(float x, interval t) {
-    return t.min < x && x < t.max;
-}
-
-void set_face_normal(Ray r, vec3 outward_normal, out hit_record rec) {
-    // Sets the hit record normal vector.
-    // NOTE: the parameter "outward_normal" is assumed to have unit length.
-
-    rec.front_face = dot(r.direction, outward_normal) < 0.0;
-
-    rec.normal = rec.front_face ? outward_normal : -outward_normal;
-
-}
-
-// defining a specific point of a ray
-vec3 point_on_ray(Ray ray, float t) {
-    return (ray.origin + t * ray.direction);
-}   
-
-// hitting a sphere
-float hit_sphere(vec3 center ,float radius, Ray r) {
-    vec3 oc = center - r.origin;
-    float a = dot(r.direction, r.direction);
-    float h = dot(r.direction, oc);
-    float c = dot(oc, oc) - pow(radius, 2.);
-    float discriminant = h * h - a * c;
-
-    if (discriminant < 0.) {
-        return -1.0;
-    } else {
-        return (h - sqrt(discriminant)) / a;
-    }
-}
-
-// hitting a sphere within a valid interval
-bool hit(vec3 center, float radius, Ray r, interval ray_t, out hit_record rec) {
-    vec3 oc = center - r.origin;
-    float a = dot(r.direction, r.direction);
-    float h = dot(r.direction, oc);
-    float c = dot(oc, oc) - pow(radius, 2.);
-
-    float discriminant = h * h - a * c;
-
-    if (discriminant < 0.)
-        return false;
-
-    float sqrtd = sqrt(discriminant);
-
-    // find the nearest root that lies in the acceptable range
-    float root = (h - sqrtd) / a;
-
-    if (!interval_surrounds(root, ray_t)) {
-        root = (h + sqrtd) / a;
-
-        if (!interval_surrounds(root, ray_t))
-            return false;
-    }
-    
-    rec.t = root;
-    rec.p = point_on_ray(r, root);
-    vec3 outward_normal = (rec.p - center) / radius;
-    set_face_normal(r, outward_normal, rec);
-    // rec.normal = (rec.p - center) / radius;
-
-    return true;
-}
-
-bool hit_list(Sphere world[MAX_SPHERE], Ray r, interval ray_t, out hit_record rec) {
-    hit_record temp_rec;
-    bool hit_anything = false;
-    float closest_so_far = ray_t.max;
-
-    for (int i = 0; i < MAX_SPHERE; i++) {
-        if (hit(world[i].center, world[i].radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-            hit_anything = true;
-            closest_so_far = temp_rec.t;
-            rec = temp_rec;
-        }   
-    }
-
-    return hit_anything;
-}
-
-vec3 raycolor(Ray r, Sphere world[MAX_SPHERE]) {
-    hit_record rec;
-
-    if (hit_list(world, r, interval(0., INFINITY), rec)) {
-        return 0.5 * (rec.normal + vec3(1.,1.,1.));
-    }
-
-    vec3 unit_direction = normalize(r.direction);
-    float a = 0.5 * (unit_direction.y + 1.0);
-    return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
-}
-
-void main() {
-    // generate the world
-    Sphere world[MAX_SPHERE];
-
-    // ground
-    world[0] = Sphere(vec3(0., -100.5, -1.), 100.);
-    // sphere1
-    world[1] = Sphere(vec3(0., 0., -1.), 0.5);
-    
-
-    vec3 pixel_center = pixel00_loc + (gl_FragCoord.x * pixel_delta_u) + (gl_FragCoord.y * pixel_delta_v);
-    vec3 ray_direction = pixel_center - camera_center;
-    Ray r = Ray(camera_center, ray_direction);
-
-    vec3 pixel_color = raycolor(r, world);
-
-    fragColor = vec4(pixel_color, 1.);
-}`;
-
 // drawing particles
 const v_Draw = `#version 300 es
     precision mediump float;
@@ -230,6 +31,7 @@ const v_Update = `
       gl_Position = vec4(position, 0.0, 1.0);
     }`;
 
+// main ray tracer logic
 const f_update_tracer = `
 #version 300 es
 
@@ -250,10 +52,8 @@ uniform vec3 pixel_delta_v;
 uniform vec3 camera_center;
 uniform sampler2D u_texture;
 uniform float texture_weight;
-uniform float seed;
-uniform float time_since_start;
-uniform float iteration;
-
+uniform float seedA;
+uniform float seedB;
 
 
 // constants
@@ -263,31 +63,6 @@ uniform float iteration;
 #define RAND_MAX 2147483647.0
 #define SAMPLES_PER_PIXEL 5
 #define MAX_RAY_BOUNCES 5
-
-// hashing functions to improve random number generation
-uint base_hash(uvec2 p) {
-    p = 1103515245U*((p >> 1U)^(p.yx));
-    uint h32 = 1103515245U*((p.x)^(p.y>>3U));
-    return h32^(h32 >> 16);
-}
-
-float random_float() {
-    uint n = base_hash(floatBitsToUint(vec2(global_seed+=.1,global_seed+=.1)));
-    return float(n)/float(0xffffffffU);
-}
-
-vec2 random_vec2() {
-    uint n = base_hash(floatBitsToUint(vec2(global_seed+=.1,global_seed+=.1)));
-    uvec2 rz = uvec2(n, n*48271U);
-    return vec2(rz.xy & uvec2(0x7fffffffU))/float(0x7fffffff);
-}
-
-vec3 random_vec3() {
-    uint n = base_hash(floatBitsToUint(vec2(global_seed+=.1,global_seed+=.1)));
-    uvec3 rz = uvec3(n, n*16807U, n*48271U);
-    return vec3(rz & uvec3(0x7fffffffU))/float(0x7fffffff);
-}
-
 
 // auxilary functions
 float degrees_to_radians(float degrees) {
@@ -423,16 +198,11 @@ bool hit_list(Sphere world[MAX_SPHERE], Ray r, interval ray_t, out hit_record re
 
 // returns a random float value from [0, 1)
 float rand() {
-    highp float a = 12.9898;
-    highp float b = 78.233;
-    highp float c = 151.7182;
-
-    highp float d = 43758.5453;
-
-    highp float dt= dot(gl_FragCoord.xyz, vec3(a + (global_seed += 0.1), b + (global_seed += 0.1), c + (global_seed += 0.1)));
+    highp float c = 43758.5453;
+    highp float dt= dot(gl_FragCoord.xy, vec2((global_seed += 0.01), (global_seed += 0.01)));
     highp float sn= mod(dt, PI);
 
-    return fract(sin(sn) * d);
+    return fract(sin(sn) * c);
 }
 
 // returns a vector of random doubles
@@ -455,6 +225,9 @@ vec3 random_unit_vector() {
         
         float lensq = dot(p, p);
 
+
+        // glsl does not support 1e-160 (64 bit float). so to avoid
+        // underflowing to 0.0 i'll use 1e-38 (32 bit float) 
         if (1e-160 < lensq && lensq <= 1.) {
             return normalize(p);
         }
@@ -477,13 +250,15 @@ vec3 sample_square() {
     return vec3(random_double() - 0.5, random_double() - 0.5, 0.);
 }
 
-// create a ray randomly within a region around a target pixel
+// create a ray from the camera that randomly falls within a region around a target pixel
 Ray get_ray() {
     // Construct a camera ray originating from the origin and directed at randomly sampled
     // point around the pixel location x, y.
     vec3 offset = sample_square();
 
-    vec3 pixel_sample = pixel00_loc + ((gl_FragCoord.x + offset.x) * pixel_delta_u) + ((gl_FragCoord.y + offset.y) * pixel_delta_v);
+    vec3 pixel_sample = pixel00_loc 
+                        + ((gl_FragCoord.x + offset.x) * pixel_delta_u) 
+                        + ((gl_FragCoord.y + offset.y) * pixel_delta_v);
 
     vec3 ray_origin = camera_center;
     vec3 ray_direction = pixel_sample - ray_origin;
@@ -497,52 +272,33 @@ vec3 ray_color(Ray r, Sphere world[MAX_SPHERE]) {
 
     Ray current_ray = r;
 
-    vec3 color = vec3(1.);
+    float attenuation = 1.;
 
-    // if (hit_list(world, r, interval(0., INFINITY), rec)) {
-    //     return 0.5 * (rec.normal + vec3(1.,1.,1.));
-    // }
-
-    // ray bounces of spheres in the world
     for (int bounce = 0; bounce < MAX_RAY_BOUNCES; bounce++) {
-        if (hit_list(world, current_ray, interval(0., INFINITY), rec)) {
-            vec3 direction = random_on_hemisphere(rec.normal);
+        if (hit_list(world, current_ray, interval(0.001, INFINITY), rec)) {
+            vec3 direction = random_on_hemisphere(rec.normal); // new ray direction
+            Ray new_ray = Ray(rec.p, direction); // create new ray from contact point
 
-            // new ray from bounce we will use
-            current_ray = Ray(rec.p, direction);
+            attenuation *= 0.5; // 50% color loss
 
-            // bounce means we have to get color information from sphere surface
-            0.5 * color;
+            current_ray = new_ray; // new ray is now current ray
         } else {
-            vec3 unit_direction = normalize(current_ray.direction);
-            float a = 0.5 * (unit_direction.y + 1.0);
-            return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+            break; // exit the for loop if ray does not contact something
         }
-    }
+    } 
+    
+    // background
+    vec3 unit_direction = normalize(current_ray.direction);
+    float a = 0.5 * (unit_direction.y + 1.0);
+    vec3 background_color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
 
-    // vec3 unit_direction = normalize(r.direction);
-    // float a = 0.5 * (unit_direction.y + 1.0);
-    // return (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+    return background_color * attenuation;
 }
 
 void main() {
     vec4 tex_color = texture(u_texture, v_texcoord);
 
-    global_seed = seed;
-
-    // fragColor = vec4(random_double(), random_double(), random_double(), 1.0);
-
-    // return;
-
-    // // global_seed = mod(time_since_start, 10000.) + dot(gl_FragCoord.xy, vec2(12.9898, 78.233));
-
-    // // random number generator dubbuger
-    // if (random_double() > 0.5)
-    //     fragColor = vec4(1.);
-    // else
-    //     fragColor = vec4(0., 0., 0., 1.);
-
-    // return;
+    global_seed = dot(gl_FragCoord.xy, vec2(seedA, seedB));
 
     // generate the world
     Sphere world[MAX_SPHERE];
@@ -551,9 +307,6 @@ void main() {
     world[0] = Sphere(vec3(0., -100.5, -1.), 100.);
     // sphere1
     world[1] = Sphere(vec3(0., 0., -1.), 0.5);
-
-    // vec3 pixel_center = pixel00_loc + (gl_FragCoord.x * pixel_delta_u) + (gl_FragCoord.y * pixel_delta_v);
-    // vec3 ray_direction = pixel_center - camera_center;
     
     // create a ray in a random direction within a certain region surrounding target pixel
     Ray r = get_ray();
@@ -601,8 +354,6 @@ const f_Init = `
     }`;
 
 export default {
-  ray_tracer_vs,
-  ray_tracer_fs,
   v_Draw,
   f_Draw,
   v_Update,
