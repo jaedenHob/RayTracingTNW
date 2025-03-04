@@ -59,7 +59,7 @@ uniform float seedB;
 // constants
 #define PI 3.1415926538
 #define INFINITY 1.0 / 0.00000000001
-#define MAX_SPHERE 2
+#define MAX_SPHERE 10
 #define RAND_MAX 2147483647.0
 #define SAMPLES_PER_PIXEL 5
 #define MAX_RAY_BOUNCES 5
@@ -85,7 +85,7 @@ float linear_to_gamma(float color_component) {
 // check if all of a vector's components are near zero
 bool near_zero(vec3 a) {
     // returns true if close to zero in all dimensions
-    float s = 0.00000001;
+    float s = 1e-8;
 
     if ((abs(a.x) < s) && (abs(a.y) < s) && (abs(a.z) < s))
         return true;
@@ -407,11 +407,10 @@ vec3 ray_color(Ray r, Sphere world[MAX_SPHERE]) {
                 scatter_direction = dielectric_scatter(current_ray.direction, attenuation, rec);
             }
 
-            Ray new_ray = Ray(rec.p, scatter_direction); // create new ray from contact point
+            current_ray = Ray(rec.p, scatter_direction); // create new ray from contact point and follow it
 
             attenuation *= .9; // 50% color loss
 
-            current_ray = new_ray; // new ray is now current ray
         } else {
             break; // exit the for loop if ray does not contact something
         }
@@ -433,49 +432,37 @@ void main() {
     // generate the world
     Sphere world[MAX_SPHERE];
 
-    // Sphere ground = Sphere(vec3(0., -100.5, -1.), 
-    //                        100., 
-    //                        Material(0, vec3(0.8, 0.8, 0.0), 0., 0.));
+    Sphere ground = Sphere(vec3(0., -100.5, -1.), 
+                           100., 
+                           Material(0, vec3(0.8, 0.8, 0.0), 0., 0.));
 
-    // Sphere center = Sphere(vec3(0., 0., -1.2), 
-    //                        0.5, 
-    //                        Material(0, vec3(0.1, 0.2, 0.5), 0., 0.));
+    Sphere center = Sphere(vec3(0., 0., -1.2), 
+                           0.5, 
+                           Material(0, vec3(0.1, 0.2, 0.5), 0., 0.));
 
     // metal
-    // Sphere left = Sphere(vec3(-1.0, 0.0, -1.0), 
-    //                        0.5, 
-    //                        Material(1, vec3(0.8, 0.8, 0.8), 0.3, 0.));
+    Sphere right = Sphere(vec3(1.0, 0.0, -1.0), 
+                           0.5, 
+                           Material(1, vec3(0.8, 0.6, 0.2), 1., 0.));
 
     // glass sphere (inner & outer)
-    // Sphere left_out = Sphere(vec3(-1.0, 0.0, -1.0), 
-    //                        0.5, 
-    //                        Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.5));
-    // Sphere left_in = Sphere(vec3(-1.0, 0.0, -1.0), 
-    //                        0.4, 
-    //                        Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.0 / 1.5));
+    Sphere left_out = Sphere(vec3(-1.0, 0.0, -1.0), 
+                           0.5, 
+                           Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.5));
+    Sphere left_in = Sphere(vec3(-1.0, 0.0, -1.0), 
+                           0.4, 
+                           Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.0 / 1.5));
 
-    // lambertian test on camera fov
-    Sphere left = Sphere(vec3(-cos(PI/4.), 0.0, -1.0), 
-                           cos(PI/4.), 
-                           Material(0, vec3(0., 0., 1.), 0., 0.));
-
-    Sphere right = Sphere(vec3(cos(PI/4.), 0.0, -1.0), 
-                           cos(PI/4.), 
-                           Material(0, vec3(1., 0., 0.), 0., 0.));
     // world array
-    world[0] = left;
+    world[0] = ground;
 
-    world[1] = right;
+    world[1] = center;
 
-    // world[0] = ground;
+    world[2] = left_out;
 
-    // world[1] = center;
+    world[3] = left_in;
 
-    // world[2] = left_out;
-
-    // world[3] = left_in;
-
-    // world[4] = right;
+    world[4] = right;
 
     
     // create a ray in a random direction within a certain region surrounding target pixel

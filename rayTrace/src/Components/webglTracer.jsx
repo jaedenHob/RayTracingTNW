@@ -4,7 +4,15 @@ import * as twgl from "twgl.js";
 
 import shaders from "./RIOW support code/shaders/ray_tracer_shaders";
 
-import util from "./RIOW support code/utils/supporting_functions";
+import {
+  degrees_to_radians,
+  distance,
+  normalize,
+  subtract_vectors,
+  cross_product,
+  multiply_a_vector,
+  negative_vector,
+} from "./RIOW support code/utils/supporting_functions";
 
 const Raytrace = () => {
   // canvas reference
@@ -18,6 +26,11 @@ const Raytrace = () => {
 
   useEffect(() => {
     let vfov = 90; // Vertical view angle (field of view)
+    let lookfrom = [-2, 2, 1]; //camera looking from
+    let lookat = [0, 0, -1]; // camera look at
+    let vup = [0, -1, 0]; // camera up direction (relative)
+
+    let u, v, w; // camra frame basis vectors
 
     //   image
     let aspect_ratio = 16.0 / 9.0;
@@ -29,16 +42,21 @@ const Raytrace = () => {
     if (image_height < 1) image_height = 1;
 
     //   camera
-    let focal_length = 1.0;
-    let theta = util.degrees_to_radians(vfov);
+    let focal_length = distance(lookfrom, lookat);
+    let theta = degrees_to_radians(vfov);
     let h = Math.tan(theta / 2);
     let viewport_height = 2 * h * focal_length;
     let viewport_width = viewport_height * (image_width / image_height);
-    let camera_center = [0, 0, 0];
+    let camera_center = lookfrom;
 
-    // calculate the vectors across the horizontal and down the vertical viewport edges
-    let viewport_u = [viewport_width, 0, 0];
-    let viewport_v = [0, viewport_height, 0];
+    // calculate the u, v, w unit basis vectors for the camera coordinate frame
+    w = normalize(subtract_vectors(lookfrom, lookat));
+    u = normalize(cross_product(vup, w));
+    v = cross_product(w, u);
+
+    // Calculate the vectors across the horizontal and down the vertical viewport edges.
+    let viewport_u = multiply_a_vector(u, viewport_width);
+    let viewport_v = multiply_a_vector(negative_vector(v), viewport_height);
 
     // calculate the horizontal and vertical delta vectors from pixel to pixel
     // Correct approach using map()
@@ -46,11 +64,15 @@ const Raytrace = () => {
     let pixel_delta_v = viewport_v.map((val) => val / image_height);
 
     // calculate the location of the upper left pixel
-    let viewport_upper_left = [
-      camera_center[0] - 0 - viewport_u[0] / 2 - viewport_v[0] / 2,
-      camera_center[1] - 0 - viewport_u[1] / 2 - viewport_v[1] / 2,
-      camera_center[2] - focal_length - viewport_u[2] / 2 - viewport_v[2] / 2,
-    ];
+    let focal_length_w = multiply_a_vector(w, focal_length);
+
+    let viewport_upper_left = subtract_vectors(
+      subtract_vectors(
+        subtract_vectors(camera_center, focal_length_w),
+        multiply_a_vector(viewport_u, 0.5)
+      ),
+      multiply_a_vector(viewport_v, 0.5)
+    );
 
     // calculate the 0,0 pixel postion
     let pixel00_loc = [
@@ -170,9 +192,6 @@ const Raytrace = () => {
 
       // // run loop at a reduced speed (4 fps)
       setTimeout(() => {
-        console.log(
-          "seed A: " + uniforms.seedA + "\nseed B: " + uniforms.seedB
-        );
         requestAnimationFrame(render);
       }, 250);
 
