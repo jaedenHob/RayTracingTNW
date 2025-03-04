@@ -64,12 +64,68 @@ uniform float seedB;
 #define SAMPLES_PER_PIXEL 5
 #define MAX_RAY_BOUNCES 5
 
+// values we will use when determining matrial type
+#define LAMBERTIAN 0
+#define METAL 1
+#define DIELECTRIC 2
+
 // auxilary functions
 float degrees_to_radians(float degrees) {
     return degrees * PI / 180.;
 }
 
+// gamma correction
+float linear_to_gamma(float color_component) {
+    if (color_component > 0.0)
+        return sqrt(color_component);
+
+    return 0.;
+}
+
+// check if all of a vector's components are near zero
+bool near_zero(vec3 a) {
+    // returns true if close to zero in all dimensions
+    float s = 0.00000001;
+
+    if ((abs(a.x) < s) && (abs(a.y) < s) && (abs(a.z) < s))
+        return true;
+    else
+        return false;
+}
+
+// function for reflectance by using shlicks approximation of reflectance
+float reflectance(float cosine, float refraction_index) {
+    float r0 = (1. - refraction_index) / (1. + refraction_index);
+    r0 = r0 * r0;
+
+    return r0 + (1. - r0) * pow((1. - cosine), 500.);
+}
+
+// reflected vector calculation
+vec3 reflection(vec3 v, vec3 n) {
+    return v - 2. * dot(v, n) * n;
+}
+
+// refracted vector calculation function
+vec3 refraction(vec3 uv, vec3 n, float etai_over_etat) {
+    float cos_theta = min(dot(-uv, n), 1.0);
+
+    vec3 r_out_perp = etai_over_etat * (uv + cos_theta * n);
+    vec3 r_out_parallel = -sqrt(abs(1.0 - dot(r_out_perp, r_out_perp))) * n;
+    return r_out_perp + r_out_parallel;
+}
+
 // structs
+
+// struct to define materials
+struct Material {
+    int type;
+    
+    vec3 albedo;
+    
+    float fuzzyness;
+    float refraction_index;
+};
 
 // defining a ray
 struct Ray {
@@ -85,6 +141,8 @@ struct hit_record {
     float t;
 
     bool front_face;
+
+    Material mat;
 };
 
 // defining a sphere
@@ -92,6 +150,8 @@ struct Sphere {
     vec3 center;
 
     float radius;
+
+    Material mat;
 };
 
 // defining an interval
@@ -148,8 +208,8 @@ float hit_sphere(vec3 center ,float radius, Ray r) {
 }
 
 // hitting a sphere within a valid interval
-bool hit(vec3 center, float radius, Ray r, interval ray_t, out hit_record rec) {
-    vec3 oc = center - r.origin;
+bool hit(Sphere orb, float radius, Ray r, interval ray_t, out hit_record rec) {
+    vec3 oc = orb.center - r.origin;
     float a = dot(r.direction, r.direction);
     float h = dot(r.direction, oc);
     float c = dot(oc, oc) - pow(radius, 2.);
@@ -173,10 +233,10 @@ bool hit(vec3 center, float radius, Ray r, interval ray_t, out hit_record rec) {
     
     rec.t = root;
     rec.p = point_on_ray(r, root);
-    vec3 outward_normal = (rec.p - center) / radius;
+    vec3 outward_normal = (rec.p - orb.center) / radius;
     set_face_normal(r, outward_normal, rec);
-    // rec.normal = (rec.p - center) / radius;
 
+    rec.mat = orb.mat;
     return true;
 }
 
@@ -186,7 +246,7 @@ bool hit_list(Sphere world[MAX_SPHERE], Ray r, interval ray_t, out hit_record re
     float closest_so_far = ray_t.max;
 
     for (int i = 0; i < MAX_SPHERE; i++) {
-        if (hit(world[i].center, world[i].radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        if (hit(world[i], world[i].radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
             hit_anything = true;
             closest_so_far = temp_rec.t;
             rec = temp_rec;
@@ -267,19 +327,89 @@ Ray get_ray() {
 
 }
 
+// lambertian scatter function
+vec3 lambertian_scatter(out vec3 color, hit_record rec) {
+    vec3 direction = rec.normal + random_unit_vector();
+
+    // catch degenerate scatter direction
+    if (near_zero(direction)) 
+        direction = rec.normal;
+
+    color *= rec.mat.albedo;
+
+    return direction;
+}
+
+// metallic scatter function
+bool metallic_scatter(out vec3 scatter_direction, Ray r, out vec3 color, hit_record rec) {
+    vec3 reflected = reflection(r.direction, rec.normal);
+    reflected = normalize(reflected) + (rec.mat.fuzzyness * random_unit_vector());
+    scatter_direction = reflected;
+    color *= rec.mat.albedo;
+
+    return (dot(reflected, rec.normal) > 0.0);
+}
+
+// dielectric scatter function
+vec3 dielectric_scatter(vec3 ray_direction, out vec3 attenuation, hit_record rec) {
+    attenuation = vec3(1., 1., 1.);
+
+    float ri = rec.front_face ? (1.0 / rec.mat.refraction_index) : rec.mat.refraction_index;
+    
+    vec3 unit_direction = normalize(ray_direction);
+
+    float cos_theta = min(dot(-unit_direction, rec.normal), 1.0);
+    float sin_theta = sqrt(1.0 - cos_theta * cos_theta);
+
+    bool cannot_refract;
+    vec3 direction;
+
+    if ((ri * sin_theta) > 1.0) {
+        cannot_refract = true; // reflect
+    } else {
+        cannot_refract = false; // refract
+    }
+
+    if (cannot_refract || reflectance(cos_theta, ri) > random_double()) {
+        direction = reflection(unit_direction, rec.normal);
+    } else {
+        direction = refraction(unit_direction, rec.normal, ri);
+    }
+
+    return direction;
+}
+
 vec3 ray_color(Ray r, Sphere world[MAX_SPHERE]) {
     hit_record rec;
 
     Ray current_ray = r;
 
-    float attenuation = 1.;
+    vec3 attenuation = vec3(1.);
+    vec3 scatter_direction;
 
+    // bounceing the ray in our world
     for (int bounce = 0; bounce < MAX_RAY_BOUNCES; bounce++) {
         if (hit_list(world, current_ray, interval(0.001, INFINITY), rec)) {
-            vec3 direction = random_on_hemisphere(rec.normal); // new ray direction
-            Ray new_ray = Ray(rec.p, direction); // create new ray from contact point
+            
+            // logic for ray bounce based on sphere material
+            if (rec.mat.type == LAMBERTIAN) { // lambertian scatter
+                scatter_direction = lambertian_scatter(attenuation, rec);
+            } 
 
-            attenuation *= 0.5; // 50% color loss
+            else if (rec.mat.type == METAL) { // metallic scatter
+                bool absorbed = metallic_scatter(scatter_direction, current_ray, attenuation, rec);
+
+                if (!absorbed)
+                    break;
+            }
+
+            else if (rec.mat.type == DIELECTRIC) { // metallic scatter
+                scatter_direction = dielectric_scatter(current_ray.direction, attenuation, rec);
+            }
+
+            Ray new_ray = Ray(rec.p, scatter_direction); // create new ray from contact point
+
+            attenuation *= .9; // 50% color loss
 
             current_ray = new_ray; // new ray is now current ray
         } else {
@@ -303,18 +433,63 @@ void main() {
     // generate the world
     Sphere world[MAX_SPHERE];
 
-    // ground
-    world[0] = Sphere(vec3(0., -100.5, -1.), 100.);
-    // sphere1
-    world[1] = Sphere(vec3(0., 0., -1.), 0.5);
+    // Sphere ground = Sphere(vec3(0., -100.5, -1.), 
+    //                        100., 
+    //                        Material(0, vec3(0.8, 0.8, 0.0), 0., 0.));
+
+    // Sphere center = Sphere(vec3(0., 0., -1.2), 
+    //                        0.5, 
+    //                        Material(0, vec3(0.1, 0.2, 0.5), 0., 0.));
+
+    // metal
+    // Sphere left = Sphere(vec3(-1.0, 0.0, -1.0), 
+    //                        0.5, 
+    //                        Material(1, vec3(0.8, 0.8, 0.8), 0.3, 0.));
+
+    // glass sphere (inner & outer)
+    // Sphere left_out = Sphere(vec3(-1.0, 0.0, -1.0), 
+    //                        0.5, 
+    //                        Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.5));
+    // Sphere left_in = Sphere(vec3(-1.0, 0.0, -1.0), 
+    //                        0.4, 
+    //                        Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.0 / 1.5));
+
+    // lambertian test on camera fov
+    Sphere left = Sphere(vec3(-cos(PI/4.), 0.0, -1.0), 
+                           cos(PI/4.), 
+                           Material(0, vec3(0., 0., 1.), 0., 0.));
+
+    Sphere right = Sphere(vec3(cos(PI/4.), 0.0, -1.0), 
+                           cos(PI/4.), 
+                           Material(0, vec3(1., 0., 0.), 0., 0.));
+    // world array
+    world[0] = left;
+
+    world[1] = right;
+
+    // world[0] = ground;
+
+    // world[1] = center;
+
+    // world[2] = left_out;
+
+    // world[3] = left_in;
+
+    // world[4] = right;
+
     
     // create a ray in a random direction within a certain region surrounding target pixel
-    Ray r = get_ray();
+    Ray ray = get_ray();
 
     // main ray is sent to the world to intesect and bounce of spheres
-    vec3 pixel_color = ray_color(r, world);
+    vec3 pixel_color = ray_color(ray, world);
 
-    fragColor = vec4(mix(pixel_color, tex_color.rgb, texture_weight), 1.0);
+    // Apply a linear to gamma transform for gamma
+    float r = linear_to_gamma(pixel_color.r);
+    float g = linear_to_gamma(pixel_color.g);
+    float b = linear_to_gamma(pixel_color.b);
+
+    fragColor = vec4(mix(vec3(r, g, b), tex_color.rgb, texture_weight), 1.0);
 }`;
 
 const f_Update = `

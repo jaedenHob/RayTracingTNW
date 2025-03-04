@@ -54,4 +54,13 @@ function multiply_a_vector(vec1, multiple) {
 function negative_vector(vec) {
   return [-vec[0], -vec[1], -vec[2]];
 }
-export default {};
+
+export default {
+  degrees_to_radians,
+  distance,
+  normalize,
+  subtract_vectors,
+  cross_product,
+  multiply_a_vector,
+  negative_vector,
+};

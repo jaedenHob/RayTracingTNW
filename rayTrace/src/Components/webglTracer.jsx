@@ -17,6 +17,8 @@ const Raytrace = () => {
   let iteration = 0;
 
   useEffect(() => {
+    let vfov = 90; // Vertical view angle (field of view)
+
     //   image
     let aspect_ratio = 16.0 / 9.0;
     let image_width = width;
@@ -28,7 +30,9 @@ const Raytrace = () => {
 
     //   camera
     let focal_length = 1.0;
-    let viewport_height = 2.0;
+    let theta = util.degrees_to_radians(vfov);
+    let h = Math.tan(theta / 2);
+    let viewport_height = 2 * h * focal_length;
     let viewport_width = viewport_height * (image_width / image_height);
     let camera_center = [0, 0, 0];
 
@@ -164,21 +168,13 @@ const Raytrace = () => {
       frame_buffer1 = frame_buffer2;
       frame_buffer2 = temp;
 
-      // // run loop at a reduced speed (30 fps)
+      // // run loop at a reduced speed (4 fps)
       setTimeout(() => {
         console.log(
           "seed A: " + uniforms.seedA + "\nseed B: " + uniforms.seedB
         );
         requestAnimationFrame(render);
       }, 250);
-
-      // run loop at a reduced speed (1 frame every 2 seconds)
-      // setTimeout(() => {
-      //   requestAnimationFrame(render);
-      //   console.log(
-      //     "seed A: " + uniforms.seedA + "\nseed B: " + uniforms.seedB
-      //   );
-      // }, 2000);
 
       // run loop at full speed
       // requestAnimationFrame(render);
