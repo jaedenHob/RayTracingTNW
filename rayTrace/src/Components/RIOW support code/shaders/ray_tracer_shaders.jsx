@@ -54,6 +54,9 @@ uniform sampler2D u_texture;
 uniform float texture_weight;
 uniform float seedA;
 uniform float seedB;
+uniform float defocus_angle;
+uniform vec3 defocus_disk_u;
+uniform vec3 defocus_disk_v;
 
 
 // constants
@@ -275,6 +278,25 @@ float random_double_interval(float min, float max) {
     return min + (max - min) * random_double();
 }
 
+// returns a vector to a random point on a unit disk
+vec3 random_in_unit_disk() {
+    float i = 1.0;
+
+    while(true) {
+        vec3 p = vec3(random_double_interval(-1.0, 1.0), random_double_interval(-1.0, 1.0), 0);
+        
+        if (dot(p, p) < 1.) {
+            return p;
+        }
+    }
+}
+
+// returns a random point in a camera defocus disk
+vec3 defocus_disk_sample() {
+    vec3 p = random_in_unit_disk();
+    return camera_center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
+}
+
 // returns a random unit vector within our sphere
 vec3 random_unit_vector() {
     while (true) {
@@ -320,7 +342,7 @@ Ray get_ray() {
                         + ((gl_FragCoord.x + offset.x) * pixel_delta_u) 
                         + ((gl_FragCoord.y + offset.y) * pixel_delta_v);
 
-    vec3 ray_origin = camera_center;
+    vec3 ray_origin = (defocus_angle <= 0.0) ? camera_center : defocus_disk_sample();
     vec3 ray_direction = pixel_sample - ray_origin;
 
     return Ray(ray_origin, ray_direction);

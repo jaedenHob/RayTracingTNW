@@ -18,17 +18,20 @@ const Raytrace = () => {
   // canvas reference
   const canvas_ref = useRef(null);
 
-  var width = 450;
+  var width = 600;
 
   // frame counts
   const [frame_count, setFrameCount] = useState(1);
   let iteration = 0;
 
   useEffect(() => {
-    let vfov = 90; // Vertical view angle (field of view)
-    let lookfrom = [-2, 2, 1]; //camera looking from
+    let vfov = 30; // Vertical view angle (field of view)
+    let lookfrom = [-2, 2, -3]; //camera looking from
     let lookat = [0, 0, -1]; // camera look at
     let vup = [0, -1, 0]; // camera up direction (relative)
+
+    let defocus_angle = 10.0; // variation angle of rays through each pixel
+    let focus_dist = 3.4; //distance of camera from plane of perfect focus
 
     let u, v, w; // camra frame basis vectors
 
@@ -42,10 +45,10 @@ const Raytrace = () => {
     if (image_height < 1) image_height = 1;
 
     //   camera
-    let focal_length = distance(lookfrom, lookat);
+    // let focal_length = distance(lookfrom, lookat);
     let theta = degrees_to_radians(vfov);
     let h = Math.tan(theta / 2);
-    let viewport_height = 2 * h * focal_length;
+    let viewport_height = 2 * h * focus_dist;
     let viewport_width = viewport_height * (image_width / image_height);
     let camera_center = lookfrom;
 
@@ -64,11 +67,11 @@ const Raytrace = () => {
     let pixel_delta_v = viewport_v.map((val) => val / image_height);
 
     // calculate the location of the upper left pixel
-    let focal_length_w = multiply_a_vector(w, focal_length);
+    let focus_dist_w = multiply_a_vector(w, focus_dist);
 
     let viewport_upper_left = subtract_vectors(
       subtract_vectors(
-        subtract_vectors(camera_center, focal_length_w),
+        subtract_vectors(camera_center, focus_dist_w),
         multiply_a_vector(viewport_u, 0.5)
       ),
       multiply_a_vector(viewport_v, 0.5)
@@ -80,6 +83,12 @@ const Raytrace = () => {
       viewport_upper_left[1] + 0.5 * (pixel_delta_u[1] + pixel_delta_v[1]),
       viewport_upper_left[2] + 0.5 * (pixel_delta_u[2] + pixel_delta_v[2]),
     ];
+
+    // calculate the camera defocus disk basis vectors
+    let defocus_radius =
+      focus_dist * Math.tan(degrees_to_radians(defocus_angle / 2));
+    let defocus_disk_u = multiply_a_vector(u, defocus_radius);
+    let defocus_disk_v = multiply_a_vector(v, defocus_radius);
 
     const canvas = canvas_ref.current;
     const gl = canvas.getContext("webgl2");
@@ -124,6 +133,9 @@ const Raytrace = () => {
       texture_weight: parseFloat(iteration / (iteration + 1)),
       seedA: null,
       seedB: null,
+      defocus_angle: defocus_angle,
+      defocus_disk_u: defocus_disk_u,
+      defocus_disk_v: defocus_disk_v,
     };
 
     // create 2 buffers to swap generated frame and saved texture
@@ -193,7 +205,7 @@ const Raytrace = () => {
       // // run loop at a reduced speed (4 fps)
       setTimeout(() => {
         requestAnimationFrame(render);
-      }, 250);
+      }, 16.66);
 
       // run loop at full speed
       // requestAnimationFrame(render);
