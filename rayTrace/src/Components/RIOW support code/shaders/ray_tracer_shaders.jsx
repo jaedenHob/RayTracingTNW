@@ -52,6 +52,7 @@ uniform vec3 pixel_delta_v;
 uniform vec3 camera_center;
 uniform sampler2D u_texture;
 uniform float texture_weight;
+uniform float iteration;
 uniform float seedA;
 uniform float seedB;
 uniform float defocus_angle;
@@ -61,10 +62,9 @@ uniform vec3 defocus_disk_v;
 
 // constants
 #define PI 3.1415926538
-#define INFINITY 1.0 / 0.00000000001
-#define MAX_SPHERE 10
+#define INFINITY 1.0 / 0.0
+#define MAX_SPHERE 5
 #define RAND_MAX 2147483647.0
-#define SAMPLES_PER_PIXEL 5
 #define MAX_RAY_BOUNCES 5
 
 // values we will use when determining matrial type
@@ -90,10 +90,7 @@ bool near_zero(vec3 a) {
     // returns true if close to zero in all dimensions
     float s = 1e-8;
 
-    if ((abs(a.x) < s) && (abs(a.y) < s) && (abs(a.z) < s))
-        return true;
-    else
-        return false;
+    return (abs(a.x) < s) && (abs(a.y) < s) && (abs(a.z) < s);
 }
 
 // function for reflectance by using shlicks approximation of reflectance
@@ -351,7 +348,10 @@ Ray get_ray() {
 
 // lambertian scatter function
 vec3 lambertian_scatter(out vec3 color, hit_record rec) {
-    vec3 direction = rec.normal + random_unit_vector();
+    // vec3 direction = rec.normal + random_unit_vector(); original should use this but causes pixel to turn black over time
+    // most likely from components being 0, NaN, or infinite.
+
+    vec3 direction = random_unit_vector();
 
     // catch degenerate scatter direction
     if (near_zero(direction)) 
@@ -449,43 +449,47 @@ vec3 ray_color(Ray r, Sphere world[MAX_SPHERE]) {
 void main() {
     vec4 tex_color = texture(u_texture, v_texcoord);
 
+    vec3 previous_color = tex_color.rgb; // previous frame color
+
     global_seed = dot(gl_FragCoord.xy, vec2(seedA, seedB));
 
     // generate the world
     Sphere world[MAX_SPHERE];
 
-    Sphere ground = Sphere(vec3(0., -100.5, -1.), 
-                           100., 
-                           Material(0, vec3(0.8, 0.8, 0.0), 0., 0.));
+    // materials
+    Material ground_mat = Material(0, vec3(0.5, 0.5, 0.5), 0., 0.);
 
-    Sphere center = Sphere(vec3(0., 0., -1.2), 
-                           0.5, 
-                           Material(0, vec3(0.1, 0.2, 0.5), 0., 0.));
+    Material material1 = Material(2, vec3(0., 0., 0.), 0., 1.5);
 
-    // metal
-    Sphere right = Sphere(vec3(1.0, 0.0, -1.0), 
-                           0.5, 
-                           Material(1, vec3(0.8, 0.6, 0.2), 1., 0.));
+    Material material2 = Material(0, vec3(0.4, 0.2, 0.1), 0., 0.);
 
-    // glass sphere (inner & outer)
-    Sphere left_out = Sphere(vec3(-1.0, 0.0, -1.0), 
-                           0.5, 
-                           Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.5));
-    Sphere left_in = Sphere(vec3(-1.0, 0.0, -1.0), 
-                           0.4, 
-                           Material(2, vec3(0.8, 0.8, 0.8), 0.3, 1.0 / 1.5));
+    Material material3 = Material(1, vec3(0.7, 0.6, 0.5), 0., 0.);
+
+    // spheres
+    Sphere ground = Sphere(vec3(0.0, -1000.0, 0.0), 
+                           1000.0,
+                           ground_mat);
+
+    Sphere sphere1 = Sphere(vec3(0.0, 1.0, 0.0), 
+                           1.0,
+                           material1);
+
+    Sphere sphere2 = Sphere(vec3(-4.0, 1.0, 0.0), 
+                           1.0,
+                           material2);
+
+    Sphere sphere3 = Sphere(vec3(4.0, 1.0, 0.0), 
+                           1.0,
+                           material3);
 
     // world array
     world[0] = ground;
 
-    world[1] = center;
+    world[1] = sphere1;
 
-    world[2] = left_out;
+    world[2] = sphere2;
 
-    world[3] = left_in;
-
-    world[4] = right;
-
+    world[3] = sphere3;
     
     // create a ray in a random direction within a certain region surrounding target pixel
     Ray ray = get_ray();
@@ -498,7 +502,20 @@ void main() {
     float g = linear_to_gamma(pixel_color.g);
     float b = linear_to_gamma(pixel_color.b);
 
-    fragColor = vec4(mix(vec3(r, g, b), tex_color.rgb, texture_weight), 1.0);
+    vec3 result_color = vec3(r, g, b);
+
+    // determines the convergence rate of our raytracer. ensure early frames contribute
+    // but at the end later frames have less impact on newer frames.
+    // float alpha = iteration / (iteration + 1.);
+
+    // linear interpolation between past frame and current frame based on current iteration
+    // vec3 lerp = mix(result_color, previous_color, alpha);
+
+    // issue with linear interpolation is bias were weighed heavily from early frames.
+    // this new formula fairly incorpartes all frames while still converging
+    vec3 proggressive = (previous_color * iteration + result_color) / (iteration + 1.);
+
+    fragColor = vec4(proggressive, 1.0);
 }`;
 
 const f_Update = `

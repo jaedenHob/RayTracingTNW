@@ -18,20 +18,20 @@ const Raytrace = () => {
   // canvas reference
   const canvas_ref = useRef(null);
 
-  var width = 600;
+  var width = 400;
 
   // frame counts
   const [frame_count, setFrameCount] = useState(1);
   let iteration = 0;
 
   useEffect(() => {
-    let vfov = 30; // Vertical view angle (field of view)
-    let lookfrom = [-2, 2, -3]; //camera looking from
-    let lookat = [0, 0, -1]; // camera look at
+    let vfov = 20; // Vertical view angle (field of view)
+    let lookfrom = [13, 2, -3]; //camera looking from
+    let lookat = [0, 0, 0]; // camera look at
     let vup = [0, -1, 0]; // camera up direction (relative)
 
-    let defocus_angle = 10.0; // variation angle of rays through each pixel
-    let focus_dist = 3.4; //distance of camera from plane of perfect focus
+    let defocus_angle = 0.6; // variation angle of rays through each pixel
+    let focus_dist = 10.0; //distance of camera from plane of perfect focus
 
     let u, v, w; // camra frame basis vectors
 
@@ -131,6 +131,7 @@ const Raytrace = () => {
       camera_center: new Float32Array(camera_center), // Float32Array for camera center
       u_texture: null, // for when we pass in previous frame as a texture
       texture_weight: parseFloat(iteration / (iteration + 1)),
+      iteration: null,
       seedA: null,
       seedB: null,
       defocus_angle: defocus_angle,
@@ -192,6 +193,7 @@ const Raytrace = () => {
       uniforms.seedA = parseFloat(random_seedA);
       uniforms.seedB = parseFloat(random_seedB);
       uniforms.texture_weight = parseFloat(iteration / (iteration + 1));
+      uniforms.iteration = iteration;
 
       twgl.setUniforms(updateProgram_info, uniforms);
       twgl.bindFramebufferInfo(gl, frame_buffer2);
