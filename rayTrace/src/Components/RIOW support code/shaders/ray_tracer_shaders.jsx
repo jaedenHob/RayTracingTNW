@@ -37,27 +37,20 @@ const f_update_tracer = `
 
 precision mediump float;
 
+// global variables
 in vec2 v_position;
 in vec2 v_texcoord;
 
 out vec4 fragColor;
 
-// global seed variable
-float global_seed = 0.0;
+float global_seed = 0.0; // seed variable (global)
 
 // uniforms
-uniform vec3 pixel00_loc; 
-uniform vec3 pixel_delta_u;
-uniform vec3 pixel_delta_v;
-uniform vec3 camera_center;
 uniform sampler2D u_texture;
 uniform float texture_weight;
 uniform float iteration;
 uniform float seedA;
 uniform float seedB;
-uniform float defocus_angle;
-uniform vec3 defocus_disk_u;
-uniform vec3 defocus_disk_v;
 
 
 // constants
@@ -116,6 +109,27 @@ vec3 refraction(vec3 uv, vec3 n, float etai_over_etat) {
 }
 
 // structs
+
+// global struct camera
+struct Camera {
+    float aspect_ratio;
+    float image_width;
+    float vfov;
+    float defocus_angle;
+    float focus_dist;
+    vec3 lookfrom;
+    vec3 lookat;
+    vec3 vup;
+    vec3 u, v, w;
+    vec3 pixel_delta_u;
+    vec3 pixel_delta_v;
+    vec3 pixel00_loc;
+    vec3 defocus_disk_u;
+    vec3 defocus_disk_v;
+
+};
+
+Camera cam; // needs variables to be setup before use
 
 // struct to define materials
 struct Material {
@@ -291,7 +305,9 @@ vec3 random_in_unit_disk() {
 // returns a random point in a camera defocus disk
 vec3 defocus_disk_sample() {
     vec3 p = random_in_unit_disk();
-    return camera_center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
+    
+    return cam.lookfrom + (p[0] * cam.defocus_disk_u) 
+                         + (p[1] * cam.defocus_disk_v);
 }
 
 // returns a random unit vector within our sphere
@@ -335,11 +351,11 @@ Ray get_ray() {
     // point around the pixel location x, y.
     vec3 offset = sample_square();
 
-    vec3 pixel_sample = pixel00_loc 
-                        + ((gl_FragCoord.x + offset.x) * pixel_delta_u) 
-                        + ((gl_FragCoord.y + offset.y) * pixel_delta_v);
+    vec3 pixel_sample = cam.pixel00_loc 
+                        + ((gl_FragCoord.x + offset.x) * cam.pixel_delta_u) 
+                        + ((gl_FragCoord.y + offset.y) * cam.pixel_delta_v);
 
-    vec3 ray_origin = (defocus_angle <= 0.0) ? camera_center : defocus_disk_sample();
+    vec3 ray_origin = (cam.defocus_angle <= 0.0) ? cam.lookfrom : defocus_disk_sample();
     vec3 ray_direction = pixel_sample - ray_origin;
 
     return Ray(ray_origin, ray_direction);
@@ -446,6 +462,55 @@ vec3 ray_color(Ray r, Sphere world[MAX_SPHERE]) {
     return background_color * attenuation;
 }
 
+// setup camera as well as veiwport
+void initalize_camera() {
+    cam.image_width = 400.0;
+    cam.aspect_ratio = 16.0 / 9.0;
+    cam.defocus_angle = 0.6;
+    cam.focus_dist = 10.0;
+    cam.vfov = 20.0;
+    cam.lookfrom = vec3(13., 2., -3);
+    cam.lookat = vec3(0., 0., 0.);
+    cam.vup = vec3(0., -1., 0.);
+
+    float image_height = cam.image_width / cam.aspect_ratio;
+    image_height = (image_height < 1.) ? 1. : image_height;
+
+    vec3 center = cam.lookfrom;
+
+    // determine viewport dimensions
+    float theta = degrees_to_radians(cam.vfov);
+    float h = tan(theta / 2.);
+    float viewport_height = 2. * h * cam.focus_dist;
+    float viewport_width = viewport_height * (cam.image_width / image_height);
+
+    // Calculate the u,v,w unit basis vectors for the camera coordinate frame.
+    cam.w = normalize(cam.lookfrom - cam.lookat);
+    cam.u = normalize(cross(cam.vup, cam.w));
+    cam.v = cross(cam.w, cam.u);
+
+    // Calculate the vectors across the horizontal and down the vertical viewport edges.
+    vec3 viewport_u = viewport_width * cam.u;
+    vec3 viewport_v = viewport_height * -cam.v;
+
+    // Calculate the horizontal and vertical delta vectors from pixel to pixel.
+    cam.pixel_delta_u = viewport_u / cam.image_width;
+    cam.pixel_delta_v = viewport_v / image_height;
+
+    // Calculate the location of the upper left pixel.
+    vec3 viewport_upper_left = center - (cam.focus_dist * cam.w) - viewport_u / 2. - viewport_v / 2.;
+
+    cam.pixel00_loc = viewport_upper_left + 0.5 * (cam.pixel_delta_u + cam.pixel_delta_v);
+
+    // Calculate the camera defocus disk basis vectors.
+    float defocus_radius = cam.focus_dist * tan(degrees_to_radians(cam.defocus_angle / 2.));
+
+    cam.defocus_disk_u = cam.u * defocus_radius;
+    cam.defocus_disk_v = cam.v * defocus_radius;
+
+    return;
+}
+
 void main() {
     vec4 tex_color = texture(u_texture, v_texcoord);
 
@@ -490,6 +555,8 @@ void main() {
     world[2] = sphere2;
 
     world[3] = sphere3;
+
+    initalize_camera();
     
     // create a ray in a random direction within a certain region surrounding target pixel
     Ray ray = get_ray();
@@ -504,18 +571,21 @@ void main() {
 
     vec3 result_color = vec3(r, g, b);
 
+    // no linear interpolation on first frame. 
+    // (no previous information to work with)
+    if (iteration == 1.0) {
+        fragColor = vec4(result_color, 1.);
+        return;
+    }
+
     // determines the convergence rate of our raytracer. ensure early frames contribute
     // but at the end later frames have less impact on newer frames.
-    // float alpha = iteration / (iteration + 1.);
+    float alpha = ((iteration) / ((iteration) + 1.));
 
     // linear interpolation between past frame and current frame based on current iteration
-    // vec3 lerp = mix(result_color, previous_color, alpha);
+    vec3 lerp = mix(result_color, previous_color, alpha);
 
-    // issue with linear interpolation is bias were weighed heavily from early frames.
-    // this new formula fairly incorpartes all frames while still converging
-    vec3 proggressive = (previous_color * iteration + result_color) / (iteration + 1.);
-
-    fragColor = vec4(proggressive, 1.0);
+    fragColor = vec4(lerp, 1.0);
 }`;
 
 const f_Update = `
