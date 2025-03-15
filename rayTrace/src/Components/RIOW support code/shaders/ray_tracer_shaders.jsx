@@ -47,6 +47,7 @@ float global_seed = 0.0; // seed variable (global)
 
 // uniforms
 uniform sampler2D u_texture;
+uniform vec3 camera_center; // user input for camera position
 uniform float texture_weight;
 uniform float iteration;
 uniform float seedA;
@@ -56,7 +57,7 @@ uniform float seedB;
 // constants
 #define PI 3.1415926538
 #define INFINITY 1.0 / 0.0
-#define MAX_SPHERE 5
+#define MAX_SPHERE 10
 #define RAND_MAX 2147483647.0
 #define MAX_RAY_BOUNCES 5
 
@@ -270,6 +271,20 @@ bool hit_list(Sphere world[MAX_SPHERE], Ray r, interval ray_t, out hit_record re
     return hit_anything;
 }
 
+// rand function for creating random spheres
+float rand_sphere(out vec2 st) {
+    highp float c = 43758.5453;
+    highp float dt= dot(gl_FragCoord.xy, st);
+
+    // update st to avoid artifacting
+    st.x += 0.01;
+    st.y += 0.01;
+
+    highp float sn= mod(dt, PI);
+
+    return fract(sin(sn) * c);
+}
+
 // returns a random float value from [0, 1)
 float rand() {
     highp float c = 43758.5453;
@@ -469,7 +484,7 @@ void initalize_camera() {
     cam.defocus_angle = 0.6;
     cam.focus_dist = 10.0;
     cam.vfov = 20.0;
-    cam.lookfrom = vec3(13., 2., -3);
+    cam.lookfrom = camera_center;
     cam.lookat = vec3(0., 0., 0.);
     cam.vup = vec3(0., -1., 0.);
 
@@ -511,6 +526,42 @@ void initalize_camera() {
     return;
 }
 
+// function to fill scene with spheres
+void generate_random_spheres(Sphere world[MAX_SPHERE]) {
+    int index = 4;
+    vec2 sphere_seed = vec2(43.01645, 8.7332);
+    for (int i = 0; i < 1; i++) {
+        for (int j = 0; j < 4; j++) {
+            float choose_mat = rand_sphere(sphere_seed);
+
+            vec3 center_point = vec3(
+                                     float(i) + 0.9 * rand_sphere(sphere_seed),
+                                     0.2,
+                                     float(j) + 0.9 * rand_sphere(sphere_seed));
+
+            if (length(center_point - vec3(4., 0.2, 0.)) > 0.9) {
+                if (choose_mat < 100.0) {
+                    // lambertian sphere
+                    vec3 albedo = vec3(
+                                       rand_sphere(sphere_seed),
+                                       rand_sphere(sphere_seed),
+                                       rand_sphere(sphere_seed));
+
+                    Material surface = Material(
+                                                 0,
+                                                 albedo,
+                                                 0.,
+                                                 0.);
+
+                    world[index] = Sphere(center_point, 0.2, surface);
+                    index++;
+                }
+            }
+        }
+    }
+    return;
+}
+
 void main() {
     vec4 tex_color = texture(u_texture, v_texcoord);
 
@@ -547,7 +598,7 @@ void main() {
                            1.0,
                            material3);
 
-    // world array
+    // world array (for spheres that are not randomly generated)
     world[0] = ground;
 
     world[1] = sphere1;
@@ -555,6 +606,9 @@ void main() {
     world[2] = sphere2;
 
     world[3] = sphere3;
+
+    // psudo random sphere generation
+    generate_random_spheres(world);
 
     initalize_camera();
     
@@ -573,14 +627,14 @@ void main() {
 
     // no linear interpolation on first frame. 
     // (no previous information to work with)
-    if (iteration == 1.0) {
+    if (iteration < 5.0) {
         fragColor = vec4(result_color, 1.);
         return;
     }
 
     // determines the convergence rate of our raytracer. ensure early frames contribute
     // but at the end later frames have less impact on newer frames.
-    float alpha = ((iteration) / ((iteration) + 1.));
+    float alpha = ((iteration * 0.7) / ((iteration * 0.7) + 1.));
 
     // linear interpolation between past frame and current frame based on current iteration
     vec3 lerp = mix(result_color, previous_color, alpha);

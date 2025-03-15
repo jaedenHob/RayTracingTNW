@@ -17,6 +17,8 @@ import {
 const Raytrace = () => {
   // canvas reference
   const canvas_ref = useRef(null);
+  const camera_pos_ref = useRef({ x: 13.0, y: 2.0, z: -3.0 }); // reference of camera position
+  const iteration_ref = useRef(0);
 
   var width = 400;
 
@@ -68,6 +70,11 @@ const Raytrace = () => {
 
     // uniforms
     let uniforms = {
+      camera_center: [
+        camera_pos_ref.current.x,
+        camera_pos_ref.current.y,
+        camera_pos_ref.current.z,
+      ],
       u_texture: null, // for when we pass in previous frame as a texture
       texture_weight: parseFloat(iteration / (iteration + 1)),
       iteration: null,
@@ -100,7 +107,9 @@ const Raytrace = () => {
 
     function render() {
       // increment iteration
-      iteration++;
+      iteration_ref.current++;
+
+      console.log(iteration_ref.current);
 
       // update current frame iteration
       setFrameCount((previous_count) => previous_count + 1);
@@ -125,11 +134,19 @@ const Raytrace = () => {
       gl.useProgram(updateProgram_info.program);
       twgl.setBuffersAndAttributes(gl, updateProgram_info, buffer_info);
 
+      // uniforms that are updated continuosly in the render loop
+      uniforms.camera_center = [
+        camera_pos_ref.current.x,
+        camera_pos_ref.current.y,
+        camera_pos_ref.current.z,
+      ];
       uniforms.u_texture = frame_buffer1.attachments[0];
       uniforms.seedA = parseFloat(random_seedA);
       uniforms.seedB = parseFloat(random_seedB);
-      uniforms.texture_weight = parseFloat(iteration / (iteration + 1));
-      uniforms.iteration = iteration;
+      uniforms.texture_weight = parseFloat(
+        iteration_ref.current / (iteration_ref.current + 1)
+      );
+      uniforms.iteration = iteration_ref.current;
 
       twgl.setUniforms(updateProgram_info, uniforms);
       twgl.bindFramebufferInfo(gl, frame_buffer2);
@@ -151,19 +168,17 @@ const Raytrace = () => {
     }
   }, []);
 
-  const [slider_values, set_slider_values] = useState({
-    posX: 13.0,
-    posY: 2.0,
-    posZ: -3.0,
-  });
-
   // Event handler for slider value changes
   const handle_slider_change = (e) => {
     const { name, value } = e.target;
-    set_slider_values((prev_state) => ({
-      ...prev_state,
+    camera_pos_ref.current = {
+      ...camera_pos_ref.current,
       [name]: parseFloat(value),
-    }));
+    };
+
+    iteration_ref.current = 1;
+
+    setFrameCount(1);
   };
 
   return (
@@ -184,44 +199,40 @@ const Raytrace = () => {
           width={width}
           height={width / (16.0 / 9.0)}
         ></canvas>
+      </div>
 
-        <div>
-          <br />
-
-          <p>Camera position:</p>
-
-          {/* Sliders for adjusting camera position */}
-          <label>Position X:</label>
-          <input
-            type="range"
-            min="-20"
-            max="20"
-            step="0.1"
-            name="posX"
-            value={slider_values.posX}
-            onChange={handle_slider_change}
-          />
-          <label>Position Y:</label>
-          <input
-            type="range"
-            min="1"
-            max="20"
-            step="0.1"
-            name="posY"
-            value={slider_values.posY}
-            onChange={handle_slider_change}
-          />
-          <label>Position Z:</label>
-          <input
-            type="range"
-            min="-20"
-            max="20"
-            step="0.1"
-            name="posZ"
-            value={slider_values.posZ}
-            onChange={handle_slider_change}
-          />
-        </div>
+      <div className="centered-container">
+        <p>Camera position:</p>
+        <label>Position X (left and right):</label>
+        <input
+          type="range"
+          min="-20"
+          max="20"
+          step="0.1"
+          name="x"
+          defaultValue={camera_pos_ref.current.x}
+          onChange={handle_slider_change}
+        />
+        <label>Position Y (up and down):</label>
+        <input
+          type="range"
+          min="1"
+          max="20"
+          step="0.1"
+          name="y"
+          defaultValue={camera_pos_ref.current.y}
+          onChange={handle_slider_change}
+        />
+        <label>Position Z (forward and back):</label>
+        <input
+          type="range"
+          min="-20"
+          max="20"
+          step="0.1"
+          name="z"
+          defaultValue={camera_pos_ref.current.z}
+          onChange={handle_slider_change}
+        />
       </div>
     </>
   );
