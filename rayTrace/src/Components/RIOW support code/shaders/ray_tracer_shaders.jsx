@@ -56,7 +56,7 @@ uniform float seedB;
 
 // constants
 #define PI 3.1415926538
-#define INFINITY 1.0 / 0.0
+#define INFINITY 100.0
 #define MAX_SPHERE 10
 #define RAND_MAX 2147483647.0
 #define MAX_RAY_BOUNCES 5
@@ -231,7 +231,7 @@ bool hit(Sphere orb, float radius, Ray r, interval ray_t, out hit_record rec) {
 
     float discriminant = h * h - a * c;
 
-    if (discriminant < 0.)
+    if (discriminant < 0.) // ealry termination if no contact
         return false;
 
     float sqrtd = sqrt(discriminant);
@@ -530,17 +530,20 @@ void initalize_camera() {
 void generate_random_spheres(Sphere world[MAX_SPHERE]) {
     int index = 4;
     vec2 sphere_seed = vec2(43.01645, 8.7332);
-    for (int i = 0; i < 1; i++) {
-        for (int j = 0; j < 4; j++) {
+
+    for (int i = -11; i < 11; i++) {
+        for (int j = -11; j < 11; j++) {
             float choose_mat = rand_sphere(sphere_seed);
 
             vec3 center_point = vec3(
-                                     float(i) + 0.9 * rand_sphere(sphere_seed),
-                                     0.2,
-                                     float(j) + 0.9 * rand_sphere(sphere_seed));
-
+                                 float(i) + 0.9 * rand_sphere(sphere_seed),
+                                 0.2,
+                                 float(j) + 0.9 * rand_sphere(sphere_seed));
+        
             if (length(center_point - vec3(4., 0.2, 0.)) > 0.9) {
-                if (choose_mat < 100.0) {
+                Material surface;
+
+                if (choose_mat < 100.) {
                     // lambertian sphere
                     vec3 albedo = vec3(
                                        rand_sphere(sphere_seed),
@@ -548,17 +551,22 @@ void generate_random_spheres(Sphere world[MAX_SPHERE]) {
                                        rand_sphere(sphere_seed));
 
                     Material surface = Material(
-                                                 0,
-                                                 albedo,
-                                                 0.,
-                                                 0.);
-
+                                    0,
+                                    albedo,
+                                    0.,
+                                    0.);
+                    
                     world[index] = Sphere(center_point, 0.2, surface);
-                    index++;
+
+                    if (index < MAX_SPHERE)
+                        index++;
+                    else
+                        return;
                 }
             }
         }
     }
+
     return;
 }
 
@@ -608,7 +616,7 @@ void main() {
     world[3] = sphere3;
 
     // psudo random sphere generation
-    generate_random_spheres(world);
+    // generate_random_spheres(world);
 
     initalize_camera();
     
@@ -627,7 +635,7 @@ void main() {
 
     // no linear interpolation on first frame. 
     // (no previous information to work with)
-    if (iteration < 5.0) {
+    if (iteration < 2.0) {
         fragColor = vec4(result_color, 1.);
         return;
     }

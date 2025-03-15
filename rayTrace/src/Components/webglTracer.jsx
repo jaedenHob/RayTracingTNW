@@ -109,8 +109,6 @@ const Raytrace = () => {
       // increment iteration
       iteration_ref.current++;
 
-      console.log(iteration_ref.current);
-
       // update current frame iteration
       setFrameCount((previous_count) => previous_count + 1);
 
@@ -157,10 +155,10 @@ const Raytrace = () => {
       frame_buffer1 = frame_buffer2;
       frame_buffer2 = temp;
 
-      // run loop at a reduced speed (30 fps)
+      // run loop at a reduced speed (?? fps)
       setTimeout(() => {
         requestAnimationFrame(render);
-      }, 33.33);
+      }, 200);
 
       // run loop at full speed
       // requestAnimationFrame(render);
@@ -206,9 +204,9 @@ const Raytrace = () => {
         <label>Position X (left and right):</label>
         <input
           type="range"
-          min="-20"
-          max="20"
-          step="0.1"
+          min="-90"
+          max="90"
+          step="0.001"
           name="x"
           defaultValue={camera_pos_ref.current.x}
           onChange={handle_slider_change}
@@ -217,8 +215,8 @@ const Raytrace = () => {
         <input
           type="range"
           min="1"
-          max="20"
-          step="0.1"
+          max="45"
+          step="0.001"
           name="y"
           defaultValue={camera_pos_ref.current.y}
           onChange={handle_slider_change}
@@ -226,9 +224,9 @@ const Raytrace = () => {
         <label>Position Z (forward and back):</label>
         <input
           type="range"
-          min="-20"
-          max="20"
-          step="0.1"
+          min="-90"
+          max="90"
+          step="0.001"
           name="z"
           defaultValue={camera_pos_ref.current.z}
           onChange={handle_slider_change}
