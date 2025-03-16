@@ -109,9 +109,6 @@ const Raytrace = () => {
       // increment iteration
       iteration_ref.current++;
 
-      // update current frame iteration
-      setFrameCount((previous_count) => previous_count + 1);
-
       // change seed every cycle
       let random_seedA = Math.random() * 1000;
       let random_seedB = Math.random() * (750 - 250) + 250;
@@ -155,10 +152,10 @@ const Raytrace = () => {
       frame_buffer1 = frame_buffer2;
       frame_buffer2 = temp;
 
-      // run loop at a reduced speed (?? fps)
+      // run loop at a reduced speed (2 fps)
       setTimeout(() => {
         requestAnimationFrame(render);
-      }, 200);
+      }, 250);
 
       // run loop at full speed
       // requestAnimationFrame(render);
@@ -175,8 +172,6 @@ const Raytrace = () => {
     };
 
     iteration_ref.current = 1;
-
-    setFrameCount(1);
   };
 
   return (
@@ -184,12 +179,6 @@ const Raytrace = () => {
       <div className="centered-container">
         <div>
           fps: <span id="fps"></span>
-        </div>
-
-        <div>
-          <div>
-            Current frame: <span id="curr_frame">{frame_count}</span>
-          </div>
         </div>
 
         <canvas

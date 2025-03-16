@@ -192,6 +192,20 @@ bool interval_surrounds(float x, interval t) {
     return t.min < x && x < t.max;
 }
 
+// returns a random float value from [0, 1)
+float rand() {
+    highp float c = 43758.5453;
+    highp float dt= dot(gl_FragCoord.xy, vec2((global_seed += 0.01), (global_seed += 0.01)));
+    highp float sn= mod(dt, PI);
+
+    return fract(sin(sn) * c);
+}
+    
+// returns a vector of random doubles
+float random_double() {
+    return rand();
+}
+
 void set_face_normal(Ray r, vec3 outward_normal, out hit_record rec) {
     // Sets the hit record normal vector.
     // NOTE: the parameter "outward_normal" is assumed to have unit length.
@@ -255,48 +269,124 @@ bool hit(Sphere orb, float radius, Ray r, interval ray_t, out hit_record rec) {
     return true;
 }
 
-bool hit_list(Sphere world[MAX_SPHERE], Ray r, interval ray_t, out hit_record rec) {
-    hit_record temp_rec;
-    bool hit_anything = false;
-    float closest_so_far = ray_t.max;
-
-    for (int i = 0; i < MAX_SPHERE; i++) {
-        if (hit(world[i], world[i].radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-            hit_anything = true;
-            closest_so_far = temp_rec.t;
-            rec = temp_rec;
-        }   
-    }
-
-    return hit_anything;
-}
-
 // rand function for creating random spheres
-float rand_sphere(out vec2 st) {
+float rand_sphere(vec2 st,out vec2 seed) {
     highp float c = 43758.5453;
-    highp float dt= dot(gl_FragCoord.xy, st);
+    highp float dt= dot(st, seed);
 
     // update st to avoid artifacting
-    st.x += 0.01;
-    st.y += 0.01;
+    seed.x += 0.01;
+    seed.y += 0.01;
 
     highp float sn= mod(dt, PI);
 
     return fract(sin(sn) * c);
 }
 
-// returns a random float value from [0, 1)
-float rand() {
-    highp float c = 43758.5453;
-    highp float dt= dot(gl_FragCoord.xy, vec2((global_seed += 0.01), (global_seed += 0.01)));
-    highp float sn= mod(dt, PI);
+bool hit_list(Ray r, interval ray_t, out hit_record rec) {
+    // local variables
+    hit_record temp_rec;
 
-    return fract(sin(sn) * c);
-}
+    bool hit_anything = false;
 
-// returns a vector of random doubles
-float random_double() {
-    return rand();
+    float closest_so_far = ray_t.max;
+
+    vec2 sphere_seed = vec2(65.2465, 5.0234);
+
+    // main spheres materials
+    Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0.);
+
+    Material material1 = Material(DIELECTRIC, vec3(0., 0., 0.), 0., 1.5);
+
+    Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0.);
+
+    Material material3 = Material(METAL, vec3(0.7, 0.6, 0.5), 0., 0.);
+
+    // spheres
+    Sphere ground = Sphere(vec3(0.0, -1000.0, 0.0), 
+                           1000.0,
+                           ground_mat);
+
+    Sphere giant_glass = Sphere(vec3(0.0, 1.0, 0.0), 
+                           1.0,
+                           material1);
+
+    Sphere giant_lambertian = Sphere(vec3(-4.0, 1.0, 0.0), 
+                           1.0,
+                           material2);
+
+    Sphere giant_metal = Sphere(vec3(4.0, 1.0, 0.0), 
+                           1.0,
+                           material3);
+
+    // hitting the four spheres that do not change
+    if (hit(ground, ground.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit(giant_glass, giant_glass.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit(giant_lambertian, giant_lambertian.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit(giant_metal, giant_metal.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    // loop to generate sphere and check for collision
+
+    for (int i = -11; i < 11; i++) {
+        for (int j = -11; j < 11; j++) {
+            vec2 sphere_seed = vec2(float(i), float(j));
+
+            float choose_mat = rand_sphere(vec2(90.901, 18.816), sphere_seed);
+
+            vec3 center_point = vec3(
+                                 float(i) + 0.9 * rand_sphere(vec2(6.232, 10.618), sphere_seed),
+                                 0.2,
+                                 float(j) + 0.9 * rand_sphere(vec2(77.313, 40.005), sphere_seed));
+
+            if (distance(center_point, vec3(4., 0.2, 0.)) > 0.9) {
+                
+                if (choose_mat < 0.8) {
+                    // lambertian sphere
+                    vec3 albedo = vec3(
+                                       rand_sphere(vec2(6.232, 50.912), sphere_seed),
+                                       rand_sphere(vec2(12.886, 0.910), sphere_seed),
+                                       rand_sphere(vec2(29.5, 87.422), sphere_seed));
+
+                    Material surface = Material(
+                                    0,
+                                    albedo,
+                                    0.,
+                                    0.);
+
+                    // create current sphere
+                    Sphere curr_sphere = Sphere(center_point, 0.2, surface);
+
+                    if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+                        hit_anything = true;
+                        closest_so_far = temp_rec.t;
+                        rec = temp_rec;
+                    } 
+                } // future else if
+            }
+        }
+    }
+
+
+    return hit_anything;
 }
 
 // returns a vector of random doubles within a range
@@ -432,7 +522,7 @@ vec3 dielectric_scatter(vec3 ray_direction, out vec3 attenuation, hit_record rec
     return direction;
 }
 
-vec3 ray_color(Ray r, Sphere world[MAX_SPHERE]) {
+vec3 ray_color(Ray r) {
     hit_record rec;
 
     Ray current_ray = r;
@@ -442,7 +532,7 @@ vec3 ray_color(Ray r, Sphere world[MAX_SPHERE]) {
 
     // bounceing the ray in our world
     for (int bounce = 0; bounce < MAX_RAY_BOUNCES; bounce++) {
-        if (hit_list(world, current_ray, interval(0.001, INFINITY), rec)) {
+        if (hit_list(current_ray, interval(0.001, INFINITY), rec)) {
             
             // logic for ray bounce based on sphere material
             if (rec.mat.type == LAMBERTIAN) { // lambertian scatter
@@ -526,50 +616,6 @@ void initalize_camera() {
     return;
 }
 
-// function to fill scene with spheres
-void generate_random_spheres(Sphere world[MAX_SPHERE]) {
-    int index = 4;
-    vec2 sphere_seed = vec2(43.01645, 8.7332);
-
-    for (int i = -11; i < 11; i++) {
-        for (int j = -11; j < 11; j++) {
-            float choose_mat = rand_sphere(sphere_seed);
-
-            vec3 center_point = vec3(
-                                 float(i) + 0.9 * rand_sphere(sphere_seed),
-                                 0.2,
-                                 float(j) + 0.9 * rand_sphere(sphere_seed));
-        
-            if (length(center_point - vec3(4., 0.2, 0.)) > 0.9) {
-                Material surface;
-
-                if (choose_mat < 100.) {
-                    // lambertian sphere
-                    vec3 albedo = vec3(
-                                       rand_sphere(sphere_seed),
-                                       rand_sphere(sphere_seed),
-                                       rand_sphere(sphere_seed));
-
-                    Material surface = Material(
-                                    0,
-                                    albedo,
-                                    0.,
-                                    0.);
-                    
-                    world[index] = Sphere(center_point, 0.2, surface);
-
-                    if (index < MAX_SPHERE)
-                        index++;
-                    else
-                        return;
-                }
-            }
-        }
-    }
-
-    return;
-}
-
 void main() {
     vec4 tex_color = texture(u_texture, v_texcoord);
 
@@ -577,54 +623,13 @@ void main() {
 
     global_seed = dot(gl_FragCoord.xy, vec2(seedA, seedB));
 
-    // generate the world
-    Sphere world[MAX_SPHERE];
-
-    // materials
-    Material ground_mat = Material(0, vec3(0.5, 0.5, 0.5), 0., 0.);
-
-    Material material1 = Material(2, vec3(0., 0., 0.), 0., 1.5);
-
-    Material material2 = Material(0, vec3(0.4, 0.2, 0.1), 0., 0.);
-
-    Material material3 = Material(1, vec3(0.7, 0.6, 0.5), 0., 0.);
-
-    // spheres
-    Sphere ground = Sphere(vec3(0.0, -1000.0, 0.0), 
-                           1000.0,
-                           ground_mat);
-
-    Sphere sphere1 = Sphere(vec3(0.0, 1.0, 0.0), 
-                           1.0,
-                           material1);
-
-    Sphere sphere2 = Sphere(vec3(-4.0, 1.0, 0.0), 
-                           1.0,
-                           material2);
-
-    Sphere sphere3 = Sphere(vec3(4.0, 1.0, 0.0), 
-                           1.0,
-                           material3);
-
-    // world array (for spheres that are not randomly generated)
-    world[0] = ground;
-
-    world[1] = sphere1;
-
-    world[2] = sphere2;
-
-    world[3] = sphere3;
-
-    // psudo random sphere generation
-    // generate_random_spheres(world);
-
     initalize_camera();
     
     // create a ray in a random direction within a certain region surrounding target pixel
     Ray ray = get_ray();
 
     // main ray is sent to the world to intesect and bounce of spheres
-    vec3 pixel_color = ray_color(ray, world);
+    vec3 pixel_color = ray_color(ray);
 
     // Apply a linear to gamma transform for gamma
     float r = linear_to_gamma(pixel_color.r);
