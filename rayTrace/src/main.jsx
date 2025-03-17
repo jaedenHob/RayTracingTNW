@@ -8,7 +8,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   // disabled strict mode to see how useefect runs
   // <React.StrictMode>
   <BrowserRouter>
-    <App />,
+    <App />
   </BrowserRouter>
   // </React.StrictMode>,
 );

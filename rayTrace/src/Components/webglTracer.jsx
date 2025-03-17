@@ -4,16 +4,6 @@ import * as twgl from "twgl.js";
 
 import shaders from "./RIOW support code/shaders/ray_tracer_shaders";
 
-import {
-  degrees_to_radians,
-  distance,
-  normalize,
-  subtract_vectors,
-  cross_product,
-  multiply_a_vector,
-  negative_vector,
-} from "./RIOW support code/utils/supporting_functions";
-
 const Raytrace = () => {
   // canvas reference
   const canvas_ref = useRef(null);
@@ -152,14 +142,10 @@ const Raytrace = () => {
       frame_buffer1 = frame_buffer2;
       frame_buffer2 = temp;
 
-      // run loop at a reduced speed (2 fps)
+      // run loop at a reduced speed (5 fps)
       setTimeout(() => {
         requestAnimationFrame(render);
-      }, 250);
-
-      // run loop at full speed
-      // requestAnimationFrame(render);
-      // console.log(uniforms.seed);
+      }, 140);
     }
   }, []);
 
@@ -177,10 +163,6 @@ const Raytrace = () => {
   return (
     <>
       <div className="centered-container">
-        <div>
-          fps: <span id="fps"></span>
-        </div>
-
         <canvas
           ref={canvas_ref}
           width={width}

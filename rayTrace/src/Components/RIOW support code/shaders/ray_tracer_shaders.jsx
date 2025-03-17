@@ -346,8 +346,8 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
 
     // loop to generate sphere and check for collision
 
-    for (int i = -11; i < 11; i++) {
-        for (int j = -11; j < 11; j++) {
+    for (int i = -7; i < 7; i++) {
+        for (int j = -7; j < 7; j++) {
             vec2 sphere_seed = vec2(float(i), float(j));
 
             float choose_mat = rand_sphere(vec2(90.901, 18.816), sphere_seed);
@@ -367,7 +367,7 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
                                        rand_sphere(vec2(29.5, 87.422), sphere_seed));
 
                     Material surface = Material(
-                                    0,
+                                    LAMBERTIAN,
                                     albedo,
                                     0.,
                                     0.);
@@ -380,7 +380,47 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
                         closest_so_far = temp_rec.t;
                         rec = temp_rec;
                     } 
-                } // future else if
+                } else if (choose_mat < 0.95) {
+                    // METAL sphere
+                    vec3 albedo = vec3(
+                                       rand_sphere(vec2(6.232, 50.912), sphere_seed),
+                                       rand_sphere(vec2(12.886, 0.910), sphere_seed),
+                                       rand_sphere(vec2(29.5, 87.422), sphere_seed));
+
+                    Material surface = Material(
+                                    METAL,
+                                    albedo,
+                                    0.5 * rand_sphere(vec2(6.232, 50.912), sphere_seed),
+                                    0.);
+
+                    // create current sphere
+                    Sphere curr_sphere = Sphere(center_point, 0.2, surface);
+
+                    if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+                        hit_anything = true;
+                        closest_so_far = temp_rec.t;
+                        rec = temp_rec;
+                    } 
+                } else {
+                    // glass
+                    vec3 albedo = vec3(0.0);
+
+                    Material surface = Material(
+                                    DIELECTRIC,
+                                    albedo,
+                                    0.0,
+                                    1.5);
+
+                    // create current sphere
+                    Sphere curr_sphere = Sphere(center_point, 0.2, surface);
+
+                    if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+                        hit_anything = true;
+                        closest_so_far = temp_rec.t;
+                        rec = temp_rec;
+                    }
+
+                }
             }
         }
     }
