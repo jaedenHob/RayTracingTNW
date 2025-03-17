@@ -592,7 +592,7 @@ vec3 ray_color(Ray r) {
 
             current_ray = Ray(rec.p, scatter_direction); // create new ray from contact point and follow it
 
-            attenuation *= .9; // 50% color loss
+            attenuation *= .9; // 10% color loss
 
         } else {
             break; // exit the for loop if ray does not contact something
