@@ -2,9 +2,7 @@ import React from "react";
 
 import Raytrace from "../Components/webglTracer";
 import poor_render from "../assets/previous_project.png";
-import GraphicsPipeline from "../assets/GraphicsPipeline.png";
-// D:\projects\Ray Tracing TNW\RayTracingTNW\rayTrace\src\assets
-// RayTracingTNW\rayTrace\src\assets\previous_project.png
+
 const RTIOW = () => {
   return (
     <>
