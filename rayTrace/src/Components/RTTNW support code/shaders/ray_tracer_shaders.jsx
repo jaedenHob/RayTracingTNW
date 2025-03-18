@@ -47,6 +47,7 @@ float global_seed = 0.0; // seed variable (global)
 
 // uniforms
 uniform sampler2D u_texture;
+uniform float width;
 uniform vec3 camera_center; // user input for camera position
 uniform float texture_weight;
 uniform float iteration;
@@ -609,13 +610,13 @@ vec3 ray_color(Ray r) {
 
 // setup camera as well as veiwport
 void initalize_camera() {
-    cam.image_width = 400.0;
+    cam.image_width = width;
     cam.aspect_ratio = 16.0 / 9.0;
     cam.defocus_angle = 0.6;
     cam.focus_dist = 10.0;
     cam.vfov = 20.0;
     cam.lookfrom = camera_center;
-    cam.lookat = vec3(0., 0., 0.);
+    cam.lookat = vec3(0., 1., 0.);
     cam.vup = vec3(0., -1., 0.);
 
     float image_height = cam.image_width / cam.aspect_ratio;
