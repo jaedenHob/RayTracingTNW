@@ -439,12 +439,16 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
                                     albedo,
                                     0.,
                                     0.);
+                    Sphere curr_sphere;
 
-                    // create current sphere (stationary)
-                    // Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
+                    if (psudo_rand(vec2(12.124, 88.293), psudo_seed) > 0.8) {
+                        // create current sphere (moving)
+                        curr_sphere = Sphere(MOVING_SPHERE, center_point, center_point + vec3(0., 0.8 * psudo_rand(vec2(26.252, 12.143), psudo_seed), 0.), 0.2, surface);
+                    } else {
+                        // create current sphere (stationary)
+                        curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
+                    }
 
-                    // create current sphere (moving)
-                    Sphere curr_sphere = Sphere(MOVING_SPHERE, center_point, center_point + vec3(0., 0.5 * psudo_rand(vec2(26.252, 12.143), psudo_seed), 0.), 0.2, surface);
 
                     if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
                         hit_anything = true;
