@@ -173,6 +173,19 @@ struct hit_record {
     Material mat;
 };
 
+// defining an interval
+struct interval {
+    float min;
+    float max;
+};
+
+// struct to define AABB (Axis-Aligned Bounding Boxes)
+struct AABB {
+    interval x;
+    interval y;
+    interval z;
+};
+
 // defining a object a ray can collide with (will expand to other objects such a box or moving sphere)
 struct Sphere {
     int object_type;
@@ -182,15 +195,25 @@ struct Sphere {
     float radius;
 
     Material mat;
-};
 
-// defining an interval
-struct interval {
-    float min;
-    float max;
+    // AABB bbox;
 };
 
 // interval functions
+
+// based on int parameter pick to return a specific interval
+interval axis_interval(int n, AABB plane) {
+    if (n == 1) return plane.y;
+    if (n == 2) return plane.z;
+    return plane.x;
+}
+
+// new interval function that pads an interval via a given amount
+interval expand(float delta, float min, float max) {
+    float padding = delta / 2.;
+    interval result = interval(min - padding, max + padding);
+    return result;
+}
 
 // check interval size
 float interval_size(interval t) {
@@ -241,19 +264,31 @@ vec3 point_on_ray(Ray ray, float t) {
     return (ray.origin + t * ray.direction);
 }   
 
-// hitting a sphere
-float hit_sphere(vec3 center ,float radius, Ray r) {
-    vec3 oc = center - r.origin;
-    float a = dot(r.direction, r.direction);
-    float h = dot(r.direction, oc);
-    float c = dot(oc, oc) - pow(radius, 2.);
-    float discriminant = h * h - a * c;
+// hitting a AABB
+bool hit_AABB(AABB box, Ray r, interval ray_t) {
+    vec3 ray_origin = r.origin;
+    vec3 ray_direction = r.direction;
 
-    if (discriminant < 0.) {
-        return -1.0;
-    } else {
-        return (h - sqrt(discriminant)) / a;
+    for (int axis = 0; axis < 3; axis++) {
+        interval ax = axis_interval(axis, box);
+
+        float adinv = 1.0 / ray_direction[axis];
+
+        float t0 = (ax.min - ray_origin[axis]) * adinv;
+        float t1 = (ax.max - ray_origin[axis]) * adinv;
+
+        if (t0 < t1) {
+            if (t0 > ray_t.min) ray_t.min = t0;
+            if (t1 < ray_t.max) ray_t.max = t1;
+        } else {
+            if (t1 > ray_t.min) ray_t.min = t1;
+            if (t0 < ray_t.max) ray_t.max = t0;
+        }
+        
+        if (ray_t.max <= ray_t.min)
+            return false;
     }
+    return true;
 }
 
 // calculate moving sphere center a given time between 0 and 1
@@ -413,92 +448,95 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
     }
 
     // loop to generate sphere and check for collision
+    // removed for debugging
+    // for (int i = -7; i < 7; i++) {
+    //     for (int j = -7; j < 7; j++) {
+    //         vec2 sphere_seed = vec2(float(i), float(j));
 
-    for (int i = -7; i < 7; i++) {
-        for (int j = -7; j < 7; j++) {
-            vec2 sphere_seed = vec2(float(i), float(j));
+    //         float choose_mat = psudo_rand(vec2(90.901, 18.816), sphere_seed);
 
-            float choose_mat = psudo_rand(vec2(90.901, 18.816), sphere_seed);
+    //         vec3 center_point = vec3(
+    //                              float(i) + 0.9 * psudo_rand(vec2(6.232, 10.618), sphere_seed),
+    //                              0.2,
+    //                              float(j) + 0.9 * psudo_rand(vec2(77.313, 40.005), sphere_seed));
 
-            vec3 center_point = vec3(
-                                 float(i) + 0.9 * psudo_rand(vec2(6.232, 10.618), sphere_seed),
-                                 0.2,
-                                 float(j) + 0.9 * psudo_rand(vec2(77.313, 40.005), sphere_seed));
-
-            if (distance(center_point, vec3(4., 0.2, 0.)) > 0.9) {
+    //         if (distance(center_point, vec3(4., 0.2, 0.)) > 0.9) {
                 
-                if (choose_mat < 0.8) {
-                    // lambertian sphere
-                    vec3 albedo = vec3(
-                                       psudo_rand(vec2(6.232, 50.912), sphere_seed),
-                                       psudo_rand(vec2(12.886, 0.910), sphere_seed),
-                                       psudo_rand(vec2(29.5, 87.422), sphere_seed));
+    //             if (choose_mat < 0.8) {
+    //                 // lambertian sphere
+    //                 vec3 albedo = vec3(
+    //                                    psudo_rand(vec2(6.232, 50.912), sphere_seed),
+    //                                    psudo_rand(vec2(12.886, 0.910), sphere_seed),
+    //                                    psudo_rand(vec2(29.5, 87.422), sphere_seed));
 
-                    Material surface = Material(
-                                    LAMBERTIAN,
-                                    albedo,
-                                    0.,
-                                    0.);
-                    Sphere curr_sphere;
+    //                 Material surface = Material(
+    //                                 LAMBERTIAN,
+    //                                 albedo,
+    //                                 0.,
+    //                                 0.);
 
-                    if (psudo_rand(vec2(12.124, 88.293), psudo_seed) > 0.8) {
-                        // create current sphere (moving)
-                        curr_sphere = Sphere(MOVING_SPHERE, center_point, center_point + vec3(0., 0.8 * psudo_rand(vec2(26.252, 12.143), psudo_seed), 0.), 0.2, surface);
-                    } else {
-                        // create current sphere (stationary)
-                        curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
-                    }
+    //                 Sphere curr_sphere;
+
+    //                 curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
+
+    //                 // if (psudo_rand(vec2(12.124, 88.293), psudo_seed) > 0.8) {
+    //                 //     // create current sphere (moving)
+    //                 //     curr_sphere = Sphere(MOVING_SPHERE, center_point, center_point + vec3(0., 0.8 * psudo_rand(vec2(26.252, 12.143), psudo_seed), 0.), 0.2, surface);
+    //                 // } else {
+    //                 //     // create current sphere (stationary)
+    //                 //     curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
+    //                 // }
 
 
-                    if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-                        hit_anything = true;
-                        closest_so_far = temp_rec.t;
-                        rec = temp_rec;
-                    } 
-                } else if (choose_mat < 0.95) {
-                    // METAL sphere
-                    vec3 albedo = vec3(
-                                       psudo_rand(vec2(6.232, 50.912), sphere_seed),
-                                       psudo_rand(vec2(12.886, 0.910), sphere_seed),
-                                       psudo_rand(vec2(29.5, 87.422), sphere_seed));
+    //                 if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+    //                     hit_anything = true;
+    //                     closest_so_far = temp_rec.t;
+    //                     rec = temp_rec;
+    //                 } 
+    //             } else if (choose_mat < 0.95) {
+    //                 // METAL sphere
+    //                 vec3 albedo = vec3(
+    //                                    psudo_rand(vec2(6.232, 50.912), sphere_seed),
+    //                                    psudo_rand(vec2(12.886, 0.910), sphere_seed),
+    //                                    psudo_rand(vec2(29.5, 87.422), sphere_seed));
 
-                    Material surface = Material(
-                                    METAL,
-                                    albedo,
-                                    0.5 * psudo_rand(vec2(6.232, 50.912), sphere_seed),
-                                    0.);
+    //                 Material surface = Material(
+    //                                 METAL,
+    //                                 albedo,
+    //                                 0.5 * psudo_rand(vec2(6.232, 50.912), sphere_seed),
+    //                                 0.);
 
-                    // create current sphere
-                    Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
+    //                 // create current sphere
+    //                 Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
 
-                    if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-                        hit_anything = true;
-                        closest_so_far = temp_rec.t;
-                        rec = temp_rec;
-                    } 
-                } else {
-                    // glass
-                    vec3 albedo = vec3(0.0);
+    //                 if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+    //                     hit_anything = true;
+    //                     closest_so_far = temp_rec.t;
+    //                     rec = temp_rec;
+    //                 } 
+    //             } else {
+    //                 // glass
+    //                 vec3 albedo = vec3(0.0);
 
-                    Material surface = Material(
-                                    DIELECTRIC,
-                                    albedo,
-                                    0.0,
-                                    1.5);
+    //                 Material surface = Material(
+    //                                 DIELECTRIC,
+    //                                 albedo,
+    //                                 0.0,
+    //                                 1.5);
 
-                    // create current sphere
-                    Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
+    //                 // create current sphere
+    //                 Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
 
-                    if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-                        hit_anything = true;
-                        closest_so_far = temp_rec.t;
-                        rec = temp_rec;
-                    }
+    //                 if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+    //                     hit_anything = true;
+    //                     closest_so_far = temp_rec.t;
+    //                     rec = temp_rec;
+    //                 }
 
-                }
-            }
-        }
-    }
+    //             }
+    //         }
+    //     }
+    // }
 
 
     return hit_anything;
@@ -727,6 +765,31 @@ void initalize_camera() {
     return;
 }
 
+// Treat the two points a and b as extrema for the bounding box, so we don't require a
+// particular minimum/maximum coordinate order.
+AABB create_AABB(vec3 a, vec3 b) {
+    AABB box;
+
+    if (a.x <= b.x) {
+        box.x = interval(a.x, b.x);
+    } else {
+        box.x = interval(b.x, a.x);
+    }
+
+    if (a.y <= b.y) {
+        box.y = interval(a.y, b.y);
+    } else {
+        box.y = interval(b.y, a.y);
+    }
+
+    if (a.z <= b.z) {
+        box.z = interval(a.z, b.z);
+    } else {
+        box.z = interval(b.z, a.z);
+    }
+    
+    return box;
+}
 void main() {
     vec4 tex_color = texture(u_texture, v_texcoord);
 
