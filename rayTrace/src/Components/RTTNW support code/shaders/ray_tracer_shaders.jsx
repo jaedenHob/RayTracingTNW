@@ -44,6 +44,7 @@ in vec2 v_texcoord;
 out vec4 fragColor;
 
 float global_seed = 0.0; // seed variable (global)
+vec2 psudo_seed = vec2(3.913, 59.121);
 
 // uniforms
 uniform sampler2D u_texture;
@@ -67,7 +68,16 @@ uniform float seedB;
 #define METAL 1
 #define DIELECTRIC 2
 
+// values for collidable objects
+#define STATIONARY_SPHERE 0
+#define MOVING_SPHERE 1
+
 // auxilary functions
+float double_time() {
+    float tm;
+
+    return tm;
+}
 float degrees_to_radians(float degrees) {
     return degrees * PI / 180.;
 }
@@ -147,6 +157,8 @@ struct Material {
 struct Ray {
     vec3 origin;
     vec3 direction;
+
+    float time;
 };
 
 // defining records of what rays hit
@@ -161,9 +173,11 @@ struct hit_record {
     Material mat;
 };
 
-// defining a sphere
+// defining a object a ray can collide with (will expand to other objects such a box or moving sphere)
 struct Sphere {
-    vec3 center;
+    int object_type;
+
+    vec3 center1, center2;
 
     float radius;
 
@@ -207,6 +221,11 @@ float random_double() {
     return rand();
 }
 
+// returns a vector of random doubles within a range
+float random_double_interval(float min, float max) {
+    return min + (max - min) * random_double();
+}
+
 void set_face_normal(Ray r, vec3 outward_normal, out hit_record rec) {
     // Sets the hit record normal vector.
     // NOTE: the parameter "outward_normal" is assumed to have unit length.
@@ -237,41 +256,81 @@ float hit_sphere(vec3 center ,float radius, Ray r) {
     }
 }
 
+// calculate moving sphere center a given time between 0 and 1
+vec3 center_at(Ray ray, vec3 center1, vec3 center2) {
+    return center1 + ((ray.time - 0.0) / (1.0 - 0.0)) * (center2 - center1);
+}
+
 // hitting a sphere within a valid interval
 bool hit(Sphere orb, float radius, Ray r, interval ray_t, out hit_record rec) {
-    vec3 oc = orb.center - r.origin;
-    float a = dot(r.direction, r.direction);
-    float h = dot(r.direction, oc);
-    float c = dot(oc, oc) - pow(radius, 2.);
+    // if else to handle hits for specific objects in the scene
+    if (orb.object_type == STATIONARY_SPHERE) {
+        vec3 oc = orb.center1 - r.origin;
+        float a = dot(r.direction, r.direction);
+        float h = dot(r.direction, oc);
+        float c = dot(oc, oc) - pow(radius, 2.);
 
-    float discriminant = h * h - a * c;
+        float discriminant = h * h - a * c;
 
-    if (discriminant < 0.) // ealry termination if no contact
-        return false;
-
-    float sqrtd = sqrt(discriminant);
-
-    // find the nearest root that lies in the acceptable range
-    float root = (h - sqrtd) / a;
-
-    if (!interval_surrounds(root, ray_t)) {
-        root = (h + sqrtd) / a;
-
-        if (!interval_surrounds(root, ray_t))
+        if (discriminant < 0.) // ealry termination if no contact
             return false;
+
+        float sqrtd = sqrt(discriminant);
+
+        // find the nearest root that lies in the acceptable range
+        float root = (h - sqrtd) / a;
+
+        if (!interval_surrounds(root, ray_t)) {
+            root = (h + sqrtd) / a;
+
+            if (!interval_surrounds(root, ray_t))
+                return false;
+        }
+        
+        rec.t = root;
+        rec.p = point_on_ray(r, root);
+        vec3 outward_normal = (rec.p - orb.center1) / radius;
+        set_face_normal(r, outward_normal, rec);
+
+        rec.mat = orb.mat;
+        return true;
+    } else if (orb.object_type == MOVING_SPHERE) {
+        vec3 current_center = center_at(r, orb.center1, orb.center2);
+        vec3 oc = current_center - r.origin;
+        float a = dot(r.direction, r.direction);
+        float h = dot(r.direction, oc);
+        float c = dot(oc, oc) - pow(radius, 2.);
+
+        float discriminant = h * h - a * c;
+
+        if (discriminant < 0.) // ealry termination if no contact
+            return false;
+
+        float sqrtd = sqrt(discriminant);
+
+        // find the nearest root that lies in the acceptable range
+        float root = (h - sqrtd) / a;
+
+        if (!interval_surrounds(root, ray_t)) {
+            root = (h + sqrtd) / a;
+
+            if (!interval_surrounds(root, ray_t))
+                return false;
+        }
+        
+        rec.t = root;
+        rec.p = point_on_ray(r, root);
+        vec3 outward_normal = (rec.p - current_center) / radius;
+        set_face_normal(r, outward_normal, rec);
+
+        rec.mat = orb.mat;
+        return true;
     }
     
-    rec.t = root;
-    rec.p = point_on_ray(r, root);
-    vec3 outward_normal = (rec.p - orb.center) / radius;
-    set_face_normal(r, outward_normal, rec);
-
-    rec.mat = orb.mat;
-    return true;
 }
 
 // rand function for creating random spheres
-float rand_sphere(vec2 st,out vec2 seed) {
+float psudo_rand(vec2 st,out vec2 seed) {
     highp float c = 43758.5453;
     highp float dt= dot(st, seed);
 
@@ -304,19 +363,27 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
     Material material3 = Material(METAL, vec3(0.7, 0.6, 0.5), 0., 0.);
 
     // spheres
-    Sphere ground = Sphere(vec3(0.0, -1000.0, 0.0), 
+    Sphere ground = Sphere(STATIONARY_SPHERE, 
+                           vec3(0.0, -1000.0, 0.0),
+                           vec3(0.), 
                            1000.0,
                            ground_mat);
 
-    Sphere giant_glass = Sphere(vec3(0.0, 1.0, 0.0), 
+    Sphere giant_glass = Sphere(STATIONARY_SPHERE, 
+                           vec3(0.0, 1.0, 0.0),
+                           vec3(0.), 
                            1.0,
                            material1);
 
-    Sphere giant_lambertian = Sphere(vec3(-4.0, 1.0, 0.0), 
+    Sphere giant_lambertian = Sphere(STATIONARY_SPHERE, 
+                           vec3(-4.0, 1.0, 0.0),
+                           vec3(0.), 
                            1.0,
                            material2);
 
-    Sphere giant_metal = Sphere(vec3(4.0, 1.0, 0.0), 
+    Sphere giant_metal = Sphere(STATIONARY_SPHERE, 
+                           vec3(4.0, 1.0, 0.0),
+                           vec3(0.), 
                            1.0,
                            material3);
 
@@ -351,21 +418,21 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
         for (int j = -7; j < 7; j++) {
             vec2 sphere_seed = vec2(float(i), float(j));
 
-            float choose_mat = rand_sphere(vec2(90.901, 18.816), sphere_seed);
+            float choose_mat = psudo_rand(vec2(90.901, 18.816), sphere_seed);
 
             vec3 center_point = vec3(
-                                 float(i) + 0.9 * rand_sphere(vec2(6.232, 10.618), sphere_seed),
+                                 float(i) + 0.9 * psudo_rand(vec2(6.232, 10.618), sphere_seed),
                                  0.2,
-                                 float(j) + 0.9 * rand_sphere(vec2(77.313, 40.005), sphere_seed));
+                                 float(j) + 0.9 * psudo_rand(vec2(77.313, 40.005), sphere_seed));
 
             if (distance(center_point, vec3(4., 0.2, 0.)) > 0.9) {
                 
                 if (choose_mat < 0.8) {
                     // lambertian sphere
                     vec3 albedo = vec3(
-                                       rand_sphere(vec2(6.232, 50.912), sphere_seed),
-                                       rand_sphere(vec2(12.886, 0.910), sphere_seed),
-                                       rand_sphere(vec2(29.5, 87.422), sphere_seed));
+                                       psudo_rand(vec2(6.232, 50.912), sphere_seed),
+                                       psudo_rand(vec2(12.886, 0.910), sphere_seed),
+                                       psudo_rand(vec2(29.5, 87.422), sphere_seed));
 
                     Material surface = Material(
                                     LAMBERTIAN,
@@ -373,8 +440,11 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
                                     0.,
                                     0.);
 
-                    // create current sphere
-                    Sphere curr_sphere = Sphere(center_point, 0.2, surface);
+                    // create current sphere (stationary)
+                    // Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
+
+                    // create current sphere (moving)
+                    Sphere curr_sphere = Sphere(MOVING_SPHERE, center_point, center_point + vec3(0., 0.5 * psudo_rand(vec2(26.252, 12.143), psudo_seed), 0.), 0.2, surface);
 
                     if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
                         hit_anything = true;
@@ -384,18 +454,18 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
                 } else if (choose_mat < 0.95) {
                     // METAL sphere
                     vec3 albedo = vec3(
-                                       rand_sphere(vec2(6.232, 50.912), sphere_seed),
-                                       rand_sphere(vec2(12.886, 0.910), sphere_seed),
-                                       rand_sphere(vec2(29.5, 87.422), sphere_seed));
+                                       psudo_rand(vec2(6.232, 50.912), sphere_seed),
+                                       psudo_rand(vec2(12.886, 0.910), sphere_seed),
+                                       psudo_rand(vec2(29.5, 87.422), sphere_seed));
 
                     Material surface = Material(
                                     METAL,
                                     albedo,
-                                    0.5 * rand_sphere(vec2(6.232, 50.912), sphere_seed),
+                                    0.5 * psudo_rand(vec2(6.232, 50.912), sphere_seed),
                                     0.);
 
                     // create current sphere
-                    Sphere curr_sphere = Sphere(center_point, 0.2, surface);
+                    Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
 
                     if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
                         hit_anything = true;
@@ -413,7 +483,7 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
                                     1.5);
 
                     // create current sphere
-                    Sphere curr_sphere = Sphere(center_point, 0.2, surface);
+                    Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
 
                     if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
                         hit_anything = true;
@@ -428,11 +498,6 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
 
 
     return hit_anything;
-}
-
-// returns a vector of random doubles within a range
-float random_double_interval(float min, float max) {
-    return min + (max - min) * random_double();
 }
 
 // returns a vector to a random point on a unit disk
@@ -503,8 +568,9 @@ Ray get_ray() {
 
     vec3 ray_origin = (cam.defocus_angle <= 0.0) ? cam.lookfrom : defocus_disk_sample();
     vec3 ray_direction = pixel_sample - ray_origin;
+    float ray_time = random_double();
 
-    return Ray(ray_origin, ray_direction);
+    return Ray(ray_origin, ray_direction, ray_time);
 
 }
 
@@ -591,7 +657,7 @@ vec3 ray_color(Ray r) {
                 scatter_direction = dielectric_scatter(current_ray.direction, attenuation, rec);
             }
 
-            current_ray = Ray(rec.p, scatter_direction); // create new ray from contact point and follow it
+            current_ray = Ray(rec.p, scatter_direction, psudo_rand(float(bounce) * vec2(43.934, 5.347), psudo_seed)); // create new ray from contact point and follow it
 
             attenuation *= .9; // 10% color loss
 
