@@ -77,7 +77,7 @@ const BVH_Tree = () => {
               Credit to Erin Catto:{" "}
               <a
                 href="https://box2d.org/files/ErinCatto_DynamicBVH_Full.pdf"
-                class="text-blue-500 hover:underline no-style"
+                className="text-blue-500 hover:underline no-style"
               >
                 ErinCatto_DynamicBVH PDF
               </a>

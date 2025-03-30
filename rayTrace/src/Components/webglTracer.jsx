@@ -10,7 +10,7 @@ const Raytrace = () => {
   const camera_pos_ref = useRef({ x: 13.0, y: 2.0, z: -3.0 }); // reference of camera position
   const iteration_ref = useRef(0);
 
-  var width = 400;
+  var width = 450;
 
   // frame counts
   const [frame_count, setFrameCount] = useState(1);

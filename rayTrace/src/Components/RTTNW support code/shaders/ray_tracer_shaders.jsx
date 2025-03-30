@@ -68,6 +68,9 @@ uniform float seedB;
 #define METAL 1
 #define DIELECTRIC 2
 
+// determining texture type
+#define CHECKERED 0
+
 // values for collidable objects
 #define STATIONARY_SPHERE 0
 #define MOVING_SPHERE 1
@@ -143,6 +146,13 @@ struct Camera {
 
 Camera cam; // needs variables to be setup before use
 
+// struct for texture
+struct texture_map {
+    float type;
+
+    vec3 color;
+};
+
 // struct to define materials
 struct Material {
     int type;
@@ -151,6 +161,8 @@ struct Material {
     
     float fuzzyness;
     float refraction_index;
+
+    texture_map tex;
 };
 
 // defining a ray
@@ -166,7 +178,7 @@ struct hit_record {
     vec3 p;
     vec3 normal;
     
-    float t;
+    float t, u, v;
 
     bool front_face;
 
@@ -179,12 +191,6 @@ struct interval {
     float max;
 };
 
-// struct to define AABB (Axis-Aligned Bounding Boxes)
-struct AABB {
-    interval x;
-    interval y;
-    interval z;
-};
 
 // defining a object a ray can collide with (will expand to other objects such a box or moving sphere)
 struct Sphere {
@@ -195,18 +201,9 @@ struct Sphere {
     float radius;
 
     Material mat;
-
-    // AABB bbox;
 };
 
 // interval functions
-
-// based on int parameter pick to return a specific interval
-interval axis_interval(int n, AABB plane) {
-    if (n == 1) return plane.y;
-    if (n == 2) return plane.z;
-    return plane.x;
-}
 
 // new interval function that pads an interval via a given amount
 interval expand(float delta, float min, float max) {
@@ -263,33 +260,6 @@ void set_face_normal(Ray r, vec3 outward_normal, out hit_record rec) {
 vec3 point_on_ray(Ray ray, float t) {
     return (ray.origin + t * ray.direction);
 }   
-
-// hitting a AABB
-bool hit_AABB(AABB box, Ray r, interval ray_t) {
-    vec3 ray_origin = r.origin;
-    vec3 ray_direction = r.direction;
-
-    for (int axis = 0; axis < 3; axis++) {
-        interval ax = axis_interval(axis, box);
-
-        float adinv = 1.0 / ray_direction[axis];
-
-        float t0 = (ax.min - ray_origin[axis]) * adinv;
-        float t1 = (ax.max - ray_origin[axis]) * adinv;
-
-        if (t0 < t1) {
-            if (t0 > ray_t.min) ray_t.min = t0;
-            if (t1 < ray_t.max) ray_t.max = t1;
-        } else {
-            if (t1 > ray_t.min) ray_t.min = t1;
-            if (t0 < ray_t.max) ray_t.max = t0;
-        }
-        
-        if (ray_t.max <= ray_t.min)
-            return false;
-    }
-    return true;
-}
 
 // calculate moving sphere center a given time between 0 and 1
 vec3 center_at(Ray ray, vec3 center1, vec3 center2) {
@@ -389,13 +359,13 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
     vec2 sphere_seed = vec2(65.2465, 5.0234);
 
     // main spheres materials
-    Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0.);
+    Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0., texture_map(0.32, vec3(0.2, 0.3, 0.1)));
 
-    Material material1 = Material(DIELECTRIC, vec3(0., 0., 0.), 0., 1.5);
+    Material material1 = Material(DIELECTRIC, vec3(0., 0., 0.), 0., 1.5, texture_map(0., vec3(0.)));
 
-    Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0.);
+    Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_map(0., vec3(0.)));
 
-    Material material3 = Material(METAL, vec3(0.7, 0.6, 0.5), 0., 0.);
+    Material material3 = Material(METAL, vec3(0.7, 0.6, 0.5), 0., 0., texture_map(0., vec3(0.)));
 
     // spheres
     Sphere ground = Sphere(STATIONARY_SPHERE, 
@@ -448,8 +418,8 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
     }
 
     // loop to generate sphere and check for collision
-    for (int i = -7; i < 7; i++) {
-        for (int j = -7; j < 7; j++) {
+    for (int i = -2; i < 2; i++) {
+        for (int j = -2; j < 2; j++) {
             vec2 sphere_seed = vec2(float(i), float(j));
 
             float choose_mat = psudo_rand(vec2(90.901, 18.816), sphere_seed);
@@ -472,19 +442,12 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
                                     LAMBERTIAN,
                                     albedo,
                                     0.,
-                                    0.);
+                                    0.,
+                                    texture_map(0., vec3(0.)));
 
                     Sphere curr_sphere;
 
-                    curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
-
-                    // if (psudo_rand(vec2(12.124, 88.293), psudo_seed) > 0.8) {
-                    //     // create current sphere (moving)
-                    //     curr_sphere = Sphere(MOVING_SPHERE, center_point, center_point + vec3(0., 0.8 * psudo_rand(vec2(26.252, 12.143), psudo_seed), 0.), 0.2, surface);
-                    // } else {
-                    //     // create current sphere (stationary)
-                    //     curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
-                    // }
+                    curr_sphere = Sphere(MOVING_SPHERE, center_point, center_point + vec3(0., 0.8 * psudo_rand(vec2(26.252, 12.143), psudo_seed), 0.), 0.2, surface);
 
 
                     if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
@@ -503,7 +466,8 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
                                     METAL,
                                     albedo,
                                     0.5 * psudo_rand(vec2(6.232, 50.912), sphere_seed),
-                                    0.);
+                                    0.,
+                                    texture_map(0., vec3(0.)));
 
                     // create current sphere
                     Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
@@ -521,7 +485,8 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
                                     DIELECTRIC,
                                     albedo,
                                     0.0,
-                                    1.5);
+                                    1.5,
+                                    texture_map(0., vec3(0.)));
 
                     // create current sphere
                     Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
@@ -625,6 +590,27 @@ vec3 lambertian_scatter(out vec3 color, hit_record rec) {
     // catch degenerate scatter direction
     if (near_zero(direction)) 
         direction = rec.normal;
+
+    if (rec.mat.tex.type > 0.0) {
+        float invert_scale = 1.0 / rec.mat.tex.type;
+
+        int x = int(
+            floor(invert_scale * rec.p.x)
+        );
+
+        int y = int(
+            floor(invert_scale * rec.p.y)
+        );
+
+        int z = int(
+            floor(invert_scale * rec.p.z)
+        );
+
+        if ((x + y + z) % 2 == 0)
+            color *= rec.mat.tex.color;
+        else
+            color *= vec3(0.9);
+    } 
 
     color *= rec.mat.albedo;
 
@@ -764,31 +750,6 @@ void initalize_camera() {
     return;
 }
 
-// Treat the two points a and b as extrema for the bounding box, so we don't require a
-// particular minimum/maximum coordinate order.
-AABB create_AABB(vec3 a, vec3 b) {
-    AABB box;
-
-    if (a.x <= b.x) {
-        box.x = interval(a.x, b.x);
-    } else {
-        box.x = interval(b.x, a.x);
-    }
-
-    if (a.y <= b.y) {
-        box.y = interval(a.y, b.y);
-    } else {
-        box.y = interval(b.y, a.y);
-    }
-
-    if (a.z <= b.z) {
-        box.z = interval(a.z, b.z);
-    } else {
-        box.z = interval(b.z, a.z);
-    }
-    
-    return box;
-}
 void main() {
     vec4 tex_color = texture(u_texture, v_texcoord);
 
