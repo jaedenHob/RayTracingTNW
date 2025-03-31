@@ -370,7 +370,7 @@ float psudo_rand(vec2 st,out vec2 seed) {
     return fract(sin(sn) * c);
 }
 
-bool add_spheres(Ray r, interval ray_t, out hit_record rec) {
+bool hit_list(Ray r, interval ray_t, out hit_record rec) {
     // local variables
     hit_record temp_rec;
 
@@ -524,15 +524,8 @@ bool add_spheres(Ray r, interval ray_t, out hit_record rec) {
         }
     }
 
+
     return hit_anything;
-}
-
-bool hit_list(Ray r, interval ray_t, out hit_record rec) {
-    bool hit_spheres = false;
-
-    hit_spheres = add_spheres(r, ray_t, rec);
-    
-    return hit_spheres;
 }
 
 // returns a vector to a random point on a unit disk
