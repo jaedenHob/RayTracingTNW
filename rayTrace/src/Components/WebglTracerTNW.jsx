@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import * as twgl from "twgl.js";
+import earth_texture from "../assets/2k_earth_daymap.jpg";
 
 import shaders from "./RTTNW support code/shaders/ray_tracer_shaders";
 
@@ -31,6 +32,15 @@ const WebglTracerTNW = () => {
       console.error("webgl context is not available.", canvas);
       return;
     }
+
+    // Load the earth texture
+    const third_planet_texture = twgl.createTexture(gl, {
+      src: earth_texture, // Path to the texture image
+      flipY: true, // Ensures correct vertical alignment
+      min: gl.LINEAR, // Linear filtering
+      mag: gl.LINEAR,
+      wrap: gl.CLAMP_TO_EDGE, // Prevents texture tiling
+    });
 
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
@@ -70,6 +80,7 @@ const WebglTracerTNW = () => {
       iteration: null,
       seedA: null,
       seedB: null,
+      planet: third_planet_texture,
     };
 
     // create 2 buffers to swap generated frame and saved texture
@@ -177,7 +188,7 @@ const WebglTracerTNW = () => {
           type="range"
           min="-90"
           max="90"
-          step="0.001"
+          step="0.05"
           name="x"
           defaultValue={camera_pos_ref.current.x}
           onChange={handle_slider_change}
@@ -187,7 +198,7 @@ const WebglTracerTNW = () => {
           type="range"
           min="1"
           max="45"
-          step="0.001"
+          step="0.05"
           name="y"
           defaultValue={camera_pos_ref.current.y}
           onChange={handle_slider_change}
@@ -197,7 +208,7 @@ const WebglTracerTNW = () => {
           type="range"
           min="-90"
           max="90"
-          step="0.001"
+          step="0.05"
           name="z"
           defaultValue={camera_pos_ref.current.z}
           onChange={handle_slider_change}

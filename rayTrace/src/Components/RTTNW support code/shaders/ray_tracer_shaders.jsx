@@ -48,6 +48,7 @@ vec2 psudo_seed = vec2(3.913, 59.121);
 
 // uniforms
 uniform sampler2D u_texture;
+uniform sampler2D planet;
 uniform float width;
 uniform vec3 camera_center; // user input for camera position
 uniform float texture_weight;
@@ -266,6 +267,25 @@ vec3 center_at(Ray ray, vec3 center1, vec3 center2) {
     return center1 + ((ray.time - 0.0) / (1.0 - 0.0)) * (center2 - center1);
 }
 
+// function to collect uv coordinates of a sphere
+void get_sphere_uv(vec3 p ,out hit_record rec) {
+    // p: a given point on the sphere of radius one, centered at the origin.
+    // u: returned value [0,1] of angle around the Y axis from X=-1.
+    // v: returned value [0,1] of angle from Y=-1 to Y=+1.
+    //     <1 0 0> yields <0.50 0.50>       <-1  0  0> yields <0.00 0.50>
+    //     <0 1 0> yields <0.50 1.00>       < 0 -1  0> yields <0.50 0.00>
+    //     <0 0 1> yields <0.25 0.50>       < 0  0 -1> yields <0.75 0.50>
+
+    float theta = acos(-p.y);
+
+    float phi = atan(-p.z, p.x) + PI;
+
+    rec.u = phi / (2. * PI);
+    rec.v = theta / PI;
+
+    return;
+}
+
 // hitting a sphere within a valid interval
 bool hit(Sphere orb, float radius, Ray r, interval ray_t, out hit_record rec) {
     // if else to handle hits for specific objects in the scene
@@ -296,8 +316,9 @@ bool hit(Sphere orb, float radius, Ray r, interval ray_t, out hit_record rec) {
         rec.p = point_on_ray(r, root);
         vec3 outward_normal = (rec.p - orb.center1) / radius;
         set_face_normal(r, outward_normal, rec);
-
+        get_sphere_uv(outward_normal, rec);
         rec.mat = orb.mat;
+
         return true;
     } else if (orb.object_type == MOVING_SPHERE) {
         vec3 current_center = center_at(r, orb.center1, orb.center2);
@@ -327,8 +348,9 @@ bool hit(Sphere orb, float radius, Ray r, interval ray_t, out hit_record rec) {
         rec.p = point_on_ray(r, root);
         vec3 outward_normal = (rec.p - current_center) / radius;
         set_face_normal(r, outward_normal, rec);
-
+        get_sphere_uv(outward_normal, rec);
         rec.mat = orb.mat;
+
         return true;
     }
     
@@ -348,7 +370,7 @@ float psudo_rand(vec2 st,out vec2 seed) {
     return fract(sin(sn) * c);
 }
 
-bool hit_list(Ray r, interval ray_t, out hit_record rec) {
+bool add_spheres(Ray r, interval ray_t, out hit_record rec) {
     // local variables
     hit_record temp_rec;
 
@@ -363,7 +385,7 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
 
     Material material1 = Material(DIELECTRIC, vec3(0., 0., 0.), 0., 1.5, texture_map(0., vec3(0.)));
 
-    Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_map(0., vec3(0.)));
+    Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_map(0.60, vec3(0.)));
 
     Material material3 = Material(METAL, vec3(0.7, 0.6, 0.5), 0., 0., texture_map(0., vec3(0.)));
 
@@ -502,8 +524,15 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
         }
     }
 
-
     return hit_anything;
+}
+
+bool hit_list(Ray r, interval ray_t, out hit_record rec) {
+    bool hit_spheres = false;
+
+    hit_spheres = add_spheres(r, ray_t, rec);
+    
+    return hit_spheres;
 }
 
 // returns a vector to a random point on a unit disk
@@ -591,7 +620,15 @@ vec3 lambertian_scatter(out vec3 color, hit_record rec) {
     if (near_zero(direction)) 
         direction = rec.normal;
 
-    if (rec.mat.tex.type > 0.0) {
+    // return with plain color if there is not texture data
+    if (rec.mat.tex.type == 0.0) {
+        color *= rec.mat.albedo;
+
+        return direction;
+    }
+
+    // logic for checkered sphere
+    if (rec.mat.tex.type == 0.32) {
         float invert_scale = 1.0 / rec.mat.tex.type;
 
         int x = int(
@@ -610,11 +647,19 @@ vec3 lambertian_scatter(out vec3 color, hit_record rec) {
             color *= rec.mat.tex.color;
         else
             color *= vec3(0.9);
-    } 
 
-    color *= rec.mat.albedo;
+        return direction;
+    }
+    
+    // logic for earth sphere
+    if (rec.mat.tex.type == 0.60) {
+        // earth texture
+        vec4 earth_color = texture(planet, vec2(rec.u, rec.v));
 
-    return direction;
+        color *= earth_color.xyz;
+
+        return direction;
+    }
 }
 
 // metallic scatter function
