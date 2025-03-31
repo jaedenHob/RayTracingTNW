@@ -59,7 +59,7 @@ uniform float seedB;
 
 // constants
 #define PI 3.1415926538
-#define INFINITY 100.0
+#define INFINITY 2.0
 #define MAX_SPHERE 10
 #define RAND_MAX 2147483647.0
 #define MAX_RAY_BOUNCES 5
@@ -190,6 +190,13 @@ struct hit_record {
 struct interval {
     float min;
     float max;
+};
+
+// define a quadrilateral plane object
+struct Quad {
+    vec3 Q, u, v;
+
+    Material mat;
 };
 
 
@@ -356,6 +363,62 @@ bool hit(Sphere orb, float radius, Ray r, interval ray_t, out hit_record rec) {
     
 }
 
+// check if inside plane
+bool is_interior(float a, float b, out hit_record rec) {
+    interval unit_interval = interval(0., 1.);
+
+    // Given the hit point in plane coordinates, return false if it is outside the
+    // primitive, otherwise set the hit record UV coordinates and return true.
+
+    if (!interval_contains(a, unit_interval) || !interval_contains(b, unit_interval))
+        return false;
+
+    rec.u = a;
+    rec.v = b;
+
+    return true;
+}
+
+// hitting a plane within a valid interval
+bool hit_quad(Quad plane, Ray r, interval ray_t, out hit_record rec) {
+    // Equation containing plane is D = normal * Q. So we must calculate D and the normal
+    vec3 n = cross(plane.u, plane.v);
+    vec3 normal = normalize(n);
+
+    float D = dot(normal, plane.Q);
+    vec3 w = n / dot(n, n);
+
+    float denom = dot(normal, r.direction);
+
+    // ray cannot hit if parrallel
+    if (abs(denom) < 1e-8)
+        return false;
+    
+    // return false if t is not within range of ray interval
+    float t = (D - dot(normal, r.origin)) / denom;
+
+    if (!interval_contains(t, ray_t)) 
+        return false;
+    
+    // determine if hit point lies within the planar shape using its plane coordinates
+    vec3 intersection = point_on_ray(r, t);
+    vec3 planar_hitpoint_vector = intersection - plane.Q;
+
+    float alpha = dot(w, cross(planar_hitpoint_vector, plane.v));
+    float beta = dot(w, cross(plane.u, planar_hitpoint_vector));
+
+    if (!is_interior(alpha, beta, rec))
+        return false;
+
+    // ray hits 2D shape so update hit record and return true
+    rec.t = t;
+    rec.p = intersection;
+    rec.mat = plane.mat;
+    set_face_normal(r, normal, rec);
+
+    return true;
+}
+
 // rand function for creating random spheres
 float psudo_rand(vec2 st,out vec2 seed) {
     highp float c = 43758.5453;
@@ -370,7 +433,8 @@ float psudo_rand(vec2 st,out vec2 seed) {
     return fract(sin(sn) * c);
 }
 
-bool hit_list(Ray r, interval ray_t, out hit_record rec) {
+// add spheres to world
+bool world_spheres(Ray r, inout interval ray_t, out hit_record rec) {
     // local variables
     hit_record temp_rec;
 
@@ -523,9 +587,127 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
             }
         }
     }
-
+    // adjust ray interval so that when collision checking for other objects we are aware
+    // if something is within range
+    ray_t.max = closest_so_far;
 
     return hit_anything;
+}
+
+// add quads to world
+bool world_quads(Ray r, inout interval ray_t, out hit_record rec) {
+    // local variables
+    hit_record temp_rec;
+    bool hit_anything = false;
+    float closest_so_far = ray_t.max;
+
+/*
+struct Quad {
+    vec3 Q, u, v;
+
+    Material mat;
+};
+
+// struct to define materials
+struct Material {
+    int type;
+    
+    vec3 albedo;
+    
+    float fuzzyness;
+    float refraction_index;
+
+    texture_map tex;
+};
+
+*/
+    // materials
+    Material red = Material(LAMBERTIAN, vec3(1., 0.2, 0.2), 0., 0., texture_map(0.0, vec3(0.)));
+    Material green = Material(LAMBERTIAN, vec3(0.2, 1., 0.2), 0., 0., texture_map(0.0, vec3(0.)));
+    Material blue = Material(LAMBERTIAN, vec3(0.2, 0.2, 1.), 0., 0., texture_map(0.0, vec3(0.)));
+    Material orange = Material(LAMBERTIAN, vec3(1., 0.5, 0.), 0., 0., texture_map(0.0, vec3(0.)));
+    Material teal = Material(LAMBERTIAN, vec3(.2, 0.8, 0.8), 0., 0., texture_map(0.0, vec3(0.)));
+
+    Quad left = Quad(
+        vec3(-3., -2., 5.),
+        vec3(0., 0., -4.),
+        vec3(0., 4., 0.),
+        red
+    );
+
+    Quad back = Quad(
+        vec3(-2., -2., 0.),
+        vec3(4., 0., 0.),
+        vec3(0., 4., 0.),
+        green
+    );
+
+    Quad right = Quad(
+        vec3(3., -2., 1.),
+        vec3(0., 0., 4.),
+        vec3(0., 4., 0.),
+        blue
+    );
+    Quad upper = Quad(
+        vec3(-2., 3., 1.),
+        vec3(4., 0., 0.),
+        vec3(0., 0., 4.),
+        orange
+    );
+    Quad lower = Quad(
+        vec3(-2., -3., 5.),
+        vec3(4., 0., 0.),
+        vec3(0., 0., -4.),
+        teal
+    );
+
+    if (hit_quad(left, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit_quad(back, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit_quad(right, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit_quad(upper, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit_quad(lower, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+
+    // adjust ray interval so that when collision checking for other objects we are aware
+    // if something is within range
+    ray_t.max = closest_so_far;
+
+    return hit_anything;
+}
+
+bool hit_list(Ray r, inout interval ray_t, out hit_record rec) {
+    bool hit_spheres = false;
+    bool hit_quads = false;
+
+    // hit_spheres = world_spheres(r, ray_t, rec);
+
+    hit_quads = world_quads(r, ray_t, rec);
+
+    return hit_spheres || hit_quads;
 }
 
 // returns a vector to a random point on a unit disk
@@ -702,9 +884,11 @@ vec3 ray_color(Ray r) {
     vec3 attenuation = vec3(1.);
     vec3 scatter_direction;
 
+    interval ray_range = interval(0.001, INFINITY);
+
     // bounceing the ray in our world
     for (int bounce = 0; bounce < MAX_RAY_BOUNCES; bounce++) {
-        if (hit_list(current_ray, interval(0.001, INFINITY), rec)) {
+        if (hit_list(current_ray, ray_range, rec)) {
             
             // logic for ray bounce based on sphere material
             if (rec.mat.type == LAMBERTIAN) { // lambertian scatter
@@ -743,11 +927,11 @@ vec3 ray_color(Ray r) {
 void initalize_camera() {
     cam.image_width = width;
     cam.aspect_ratio = 16.0 / 9.0;
-    cam.defocus_angle = 0.6;
+    cam.defocus_angle = 0.;
     cam.focus_dist = 10.0;
-    cam.vfov = 20.0;
+    cam.vfov = 80.0;
     cam.lookfrom = camera_center;
-    cam.lookat = vec3(0., 1., 0.);
+    cam.lookat = vec3(0., 0., 0.);
     cam.vup = vec3(0., -1., 0.);
 
     float image_height = cam.image_width / cam.aspect_ratio;
