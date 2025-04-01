@@ -84,6 +84,10 @@ The image below is the traditional approach that takes a long time to render and
 
 ![alt text](image-10.png)
 
+## project now has realistic lighting
+
+![alt text](image-11.png)
+
 ## To install just copy the repo then install the dependencies:
 
 `npm install`

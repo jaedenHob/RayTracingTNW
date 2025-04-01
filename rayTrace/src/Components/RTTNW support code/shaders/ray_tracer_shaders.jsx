@@ -71,6 +71,7 @@ uniform float seedB;
 
 // determining texture type
 #define CHECKERED 0
+#define DIFFUSE_LIGHT 1.
 
 // values for collidable objects
 #define STATIONARY_SPHERE 0
@@ -478,11 +479,11 @@ bool world_spheres(Ray r, interval ray_t, out hit_record rec) {
                            material3);
 
     // hitting the four spheres that do not change
-    // if (hit(ground, ground.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-    //     hit_anything = true;
-    //     closest_so_far = temp_rec.t;
-    //     rec = temp_rec;
-    // }
+    if (hit(ground, ground.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
 
     if (hit(giant_glass, giant_glass.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
         hit_anything = true;
@@ -503,89 +504,89 @@ bool world_spheres(Ray r, interval ray_t, out hit_record rec) {
     }
 
     // loop to generate sphere and check for collision
-    // for (int i = -2; i < 2; i++) {
-    //     for (int j = -2; j < 2; j++) {
-    //         vec2 sphere_seed = vec2(float(i), float(j));
+    for (int i = -2; i < 2; i++) {
+        for (int j = -2; j < 2; j++) {
+            vec2 sphere_seed = vec2(float(i), float(j));
 
-    //         float choose_mat = psudo_rand(vec2(90.901, 18.816), sphere_seed);
+            float choose_mat = psudo_rand(vec2(90.901, 18.816), sphere_seed);
 
-    //         vec3 center_point = vec3(
-    //                              float(i) + 0.9 * psudo_rand(vec2(6.232, 10.618), sphere_seed),
-    //                              0.2,
-    //                              float(j) + 0.9 * psudo_rand(vec2(77.313, 40.005), sphere_seed));
+            vec3 center_point = vec3(
+                                 float(i) + 0.9 * psudo_rand(vec2(6.232, 10.618), sphere_seed),
+                                 0.2,
+                                 float(j) + 0.9 * psudo_rand(vec2(77.313, 40.005), sphere_seed));
 
-    //         if (distance(center_point, vec3(4., 0.2, 0.)) > 0.9) {
+            if (distance(center_point, vec3(4., 0.2, 0.)) > 0.9) {
                 
-    //             if (choose_mat < 0.8) {
-    //                 // lambertian sphere
-    //                 vec3 albedo = vec3(
-    //                                    psudo_rand(vec2(6.232, 50.912), sphere_seed),
-    //                                    psudo_rand(vec2(12.886, 0.910), sphere_seed),
-    //                                    psudo_rand(vec2(29.5, 87.422), sphere_seed));
+                if (choose_mat < 0.8) {
+                    // lambertian sphere
+                    vec3 albedo = vec3(
+                                       psudo_rand(vec2(6.232, 50.912), sphere_seed),
+                                       psudo_rand(vec2(12.886, 0.910), sphere_seed),
+                                       psudo_rand(vec2(29.5, 87.422), sphere_seed));
 
-    //                 Material surface = Material(
-    //                                 LAMBERTIAN,
-    //                                 albedo,
-    //                                 0.,
-    //                                 0.,
-    //                                 texture_(0., vec3(0.)), texture_(0., vec3(0.)));
+                    Material surface = Material(
+                                    LAMBERTIAN,
+                                    albedo,
+                                    0.,
+                                    0.,
+                                    texture_(0., vec3(0.)), texture_(0., vec3(0.)));
 
-    //                 Sphere curr_sphere;
+                    Sphere curr_sphere;
 
-    //                 curr_sphere = Sphere(MOVING_SPHERE, center_point, center_point + vec3(0., 0.8 * psudo_rand(vec2(26.252, 12.143), psudo_seed), 0.), 0.2, surface);
+                    curr_sphere = Sphere(MOVING_SPHERE, center_point, center_point + vec3(0., 0.8 * psudo_rand(vec2(26.252, 12.143), psudo_seed), 0.), 0.2, surface);
 
 
-    //                 if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-    //                     hit_anything = true;
-    //                     closest_so_far = temp_rec.t;
-    //                     rec = temp_rec;
-    //                 } 
-    //             } else if (choose_mat < 0.95) {
-    //                 // METAL sphere
-    //                 vec3 albedo = vec3(
-    //                                    psudo_rand(vec2(6.232, 50.912), sphere_seed),
-    //                                    psudo_rand(vec2(12.886, 0.910), sphere_seed),
-    //                                    psudo_rand(vec2(29.5, 87.422), sphere_seed));
+                    if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+                        hit_anything = true;
+                        closest_so_far = temp_rec.t;
+                        rec = temp_rec;
+                    } 
+                } else if (choose_mat < 0.95) {
+                    // METAL sphere
+                    vec3 albedo = vec3(
+                                       psudo_rand(vec2(6.232, 50.912), sphere_seed),
+                                       psudo_rand(vec2(12.886, 0.910), sphere_seed),
+                                       psudo_rand(vec2(29.5, 87.422), sphere_seed));
 
-    //                 Material surface = Material(
-    //                                 METAL,
-    //                                 albedo,
-    //                                 0.5 * psudo_rand(vec2(6.232, 50.912), sphere_seed),
-    //                                 0.,
-    //                                 texture_(0., vec3(0.)), texture_(0., vec3(0.)));
+                    Material surface = Material(
+                                    METAL,
+                                    albedo,
+                                    0.5 * psudo_rand(vec2(6.232, 50.912), sphere_seed),
+                                    0.,
+                                    texture_(0., vec3(0.)), texture_(0., vec3(0.)));
 
-    //                 // create current sphere
-    //                 Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
+                    // create current sphere
+                    Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
 
-    //                 if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-    //                     hit_anything = true;
-    //                     closest_so_far = temp_rec.t;
-    //                     rec = temp_rec;
-    //                 } 
-    //             } else {
-    //                 // glass
-    //                 vec3 albedo = vec3(0.0);
+                    if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+                        hit_anything = true;
+                        closest_so_far = temp_rec.t;
+                        rec = temp_rec;
+                    } 
+                } else {
+                    // glass
+                    vec3 albedo = vec3(0.0);
 
-    //                 Material surface = Material(
-    //                                 DIELECTRIC,
-    //                                 albedo,
-    //                                 0.0,
-    //                                 1.5,
-    //                                 texture_(0., vec3(0.)), texture_(0., vec3(0.)));
+                    Material surface = Material(
+                                    DIELECTRIC,
+                                    albedo,
+                                    0.0,
+                                    1.5,
+                                    texture_(0., vec3(0.)), texture_(0., vec3(0.)));
 
-    //                 // create current sphere
-    //                 Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
+                    // create current sphere
+                    Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
 
-    //                 if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-    //                     hit_anything = true;
-    //                     closest_so_far = temp_rec.t;
-    //                     rec = temp_rec;
-    //                 }
+                    if (hit(curr_sphere, curr_sphere.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+                        hit_anything = true;
+                        closest_so_far = temp_rec.t;
+                        rec = temp_rec;
+                    }
 
-    //             }
-    //         }
-    //     }
-    // }
+                }
+            }
+        }
+    }
 
     return hit_anything;
 }
@@ -643,11 +644,11 @@ bool world_quads(Ray r, inout interval ray_t, out hit_record rec) {
         rec = temp_rec;
     }
 
-    // if (hit_quad(back, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-    //     hit_anything = true;
-    //     closest_so_far = temp_rec.t;
-    //     rec = temp_rec;
-    // }
+    if (hit_quad(back, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
 
     if (hit_quad(right, r, interval(ray_t.min, closest_so_far), temp_rec)) {
         hit_anything = true;
@@ -683,7 +684,7 @@ bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
     float closest_so_far = ray_t.max;
 
     // materials
-    Material light = Material(LAMBERTIAN, vec3(0.2, 0.2, 1.), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(100.)));
+    Material light = Material(LAMBERTIAN, vec3(1.), 0., 0., texture_(0.0, vec3(0.)),  texture_(DIFFUSE_LIGHT, vec3(4.)));
     Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0., texture_(0.0, vec3(0.2, 0.3, 0.1)),  texture_(0., vec3(0.)));
     Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
 
@@ -694,23 +695,27 @@ bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
                            ground_mat);
 
     Sphere giant_lambertian = Sphere(STATIONARY_SPHERE, 
-                           vec3(0., 3., 0.),
+                           vec3(0., 2., 0.),
                            vec3(0.), 
-                           1.0,
+                           2.0,
                            material2);
+    /*struct Quad {
+    vec3 Q, u, v;
 
-    Quad right = Quad(
-        vec3(3., 1., -2.),
+    Material mat;
+};*/
+    Quad glowing_plane = Quad(
+        vec3(2.5, 1., -2.5),
         vec3(2., 0., 0.),
         vec3(0., 2., 0.),
         light
     );
 
-    // if (hit(ground, ground.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-    //     hit_anything = true;
-    //     closest_so_far = temp_rec.t;
-    //     rec = temp_rec;
-    // }
+    if (hit(ground, ground.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
 
     if (hit(giant_lambertian, giant_lambertian.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
         hit_anything = true;
@@ -718,7 +723,7 @@ bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
         rec = temp_rec;
     }
 
-    if (hit_quad(right, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+    if (hit_quad(glowing_plane, r, interval(ray_t.min, closest_so_far), temp_rec)) {
         hit_anything = true;
         closest_so_far = temp_rec.t;
         rec = temp_rec;
@@ -738,9 +743,9 @@ bool hit_list(Ray r, interval ray_t, out hit_record rec) {
     bool hit_quads = false;
     bool hit_lights = false;
 
-    hit_spheres = world_spheres(r, ray_t, rec);
+    // hit_spheres = world_spheres(r, ray_t, rec);
 
-    hit_quads = world_quads(r, ray_t, rec);
+    // hit_quads = world_quads(r, ray_t, rec);
 
     hit_lights = world_lights(r, ray_t, rec);
     
@@ -934,17 +939,28 @@ bool calculate_scatter(Ray current_ray, hit_record rec, out vec3 attenuation, ou
     return true;
 }
 
+vec3 material_emitted(const in hit_record rec) {
+    if (rec.mat.emit.type == DIFFUSE_LIGHT)
+        return rec.mat.emit.color;
+    else
+        return vec3(0.);
+}
+
 vec3 ray_color(Ray r) {
     hit_record rec;
 
     Ray current_ray = r;
 
     vec3 attenuation = vec3(1.);
+    vec3 emit_color = vec3(0.);
     vec3 scatter_direction;
 
     // bounceing the ray in our world
     for (int bounce = 0; bounce < MAX_RAY_BOUNCES; bounce++) {
         if (hit_list(current_ray, interval(0.001, INFINITY), rec)) {
+
+            // calculate emitted color if light source
+            emit_color += material_emitted(rec);
             
             // logic for ray bounce based on sphere material
             if (!calculate_scatter(current_ray, rec, attenuation, scatter_direction))
@@ -962,9 +978,10 @@ vec3 ray_color(Ray r) {
     // background
     vec3 unit_direction = normalize(current_ray.direction);
     float a = 0.5 * (unit_direction.y + 1.0);
-    vec3 background_color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+    // vec3 background_color = (1.0 - a) * vec3(1.0, 1.0, 1.0) + a * vec3(0.5, 0.7, 1.0);
+    vec3 background_color = vec3(0.);
 
-    return background_color * attenuation;
+    return (background_color + emit_color) * attenuation;
 }
 
 // setup camera as well as veiwport
@@ -1040,14 +1057,14 @@ void main() {
 
     // no linear interpolation on first frame. 
     // (no previous information to work with)
-    if (iteration < 2.0) {
-        fragColor = vec4(result_color, 1.);
-        return;
-    }
+    // if (iteration < 2.0) {
+    //     fragColor = vec4(result_color, 1.);
+    //     return;
+    // }
 
     // determines the convergence rate of our raytracer. ensure early frames contribute
     // but at the end later frames have less impact on newer frames.
-    float alpha = ((iteration * 0.7) / ((iteration * 0.7) + 1.));
+    float alpha = ((iteration) / ((iteration) + 1.));
 
     // linear interpolation between past frame and current frame based on current iteration
     vec3 lerp = mix(result_color, previous_color, alpha);
