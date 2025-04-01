@@ -148,7 +148,7 @@ struct Camera {
 Camera cam; // needs variables to be setup before use
 
 // struct for texture
-struct texture_map {
+struct texture_ {
     float type;
 
     vec3 color;
@@ -163,7 +163,8 @@ struct Material {
     float fuzzyness;
     float refraction_index;
 
-    texture_map tex;
+    texture_ tex;
+    texture_ emit;
 };
 
 // defining a ray
@@ -445,13 +446,13 @@ bool world_spheres(Ray r, inout interval ray_t, out hit_record rec) {
     vec2 sphere_seed = vec2(65.2465, 5.0234);
 
     // main spheres materials
-    Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0., texture_map(0.32, vec3(0.2, 0.3, 0.1)));
+    Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0., texture_(0.32, vec3(0.2, 0.3, 0.1)), texture_(0.0, vec3(0.)));
 
-    Material material1 = Material(DIELECTRIC, vec3(0., 0., 0.), 0., 1.5, texture_map(0., vec3(0.)));
+    Material material1 = Material(DIELECTRIC, vec3(0., 0., 0.), 0., 1.5, texture_(0., vec3(0.)), texture_(0.0, vec3(0.)));
 
-    Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_map(0.60, vec3(0.)));
+    Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_(0.60, vec3(0.)), texture_(0.0, vec3(0.)));
 
-    Material material3 = Material(METAL, vec3(0.7, 0.6, 0.5), 0., 0., texture_map(0., vec3(0.)));
+    Material material3 = Material(METAL, vec3(0.7, 0.6, 0.5), 0., 0., texture_(0., vec3(0.)), texture_(0.0, vec3(0.)));
 
     // spheres
     Sphere ground = Sphere(STATIONARY_SPHERE, 
@@ -529,7 +530,7 @@ bool world_spheres(Ray r, inout interval ray_t, out hit_record rec) {
                                     albedo,
                                     0.,
                                     0.,
-                                    texture_map(0., vec3(0.)));
+                                    texture_(0., vec3(0.)), texture_(0.0, vec3(0.)));
 
                     Sphere curr_sphere;
 
@@ -553,7 +554,7 @@ bool world_spheres(Ray r, inout interval ray_t, out hit_record rec) {
                                     albedo,
                                     0.5 * psudo_rand(vec2(6.232, 50.912), sphere_seed),
                                     0.,
-                                    texture_map(0., vec3(0.)));
+                                    texture_(0., vec3(0.)), texture_(0.0, vec3(0.)));
 
                     // create current sphere
                     Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
@@ -572,7 +573,7 @@ bool world_spheres(Ray r, inout interval ray_t, out hit_record rec) {
                                     albedo,
                                     0.0,
                                     1.5,
-                                    texture_map(0., vec3(0.)));
+                                    texture_(0., vec3(0.)), texture_(0.0, vec3(0.)));
 
                     // create current sphere
                     Sphere curr_sphere = Sphere(STATIONARY_SPHERE, center_point, vec3(0.), 0.2, surface);
@@ -617,16 +618,16 @@ struct Material {
     float fuzzyness;
     float refraction_index;
 
-    texture_map tex;
+    texture_ tex;
 };
 
 */
     // materials
-    Material red = Material(LAMBERTIAN, vec3(1., 0.2, 0.2), 0., 0., texture_map(0.0, vec3(0.)));
-    Material green = Material(LAMBERTIAN, vec3(0.2, 1., 0.2), 0., 0., texture_map(0.0, vec3(0.)));
-    Material blue = Material(LAMBERTIAN, vec3(0.2, 0.2, 1.), 0., 0., texture_map(0.0, vec3(0.)));
-    Material orange = Material(LAMBERTIAN, vec3(1., 0.5, 0.), 0., 0., texture_map(0.0, vec3(0.)));
-    Material teal = Material(LAMBERTIAN, vec3(.2, 0.8, 0.8), 0., 0., texture_map(0.0, vec3(0.)));
+    Material red = Material(LAMBERTIAN, vec3(1., 0.2, 0.2), 0., 0., texture_(0.0, vec3(0.)), texture_(0.0, vec3(0.)));
+    Material green = Material(LAMBERTIAN, vec3(0.2, 1., 0.2), 0., 0., texture_(0.0, vec3(0.)), texture_(0.0, vec3(0.)));
+    Material blue = Material(LAMBERTIAN, vec3(0.2, 0.2, 1.), 0., 0., texture_(0.0, vec3(0.)), texture_(0.0, vec3(0.)));
+    Material orange = Material(LAMBERTIAN, vec3(1., 0.5, 0.), 0., 0., texture_(0.0, vec3(0.)), texture_(0.0, vec3(0.)));
+    Material teal = Material(LAMBERTIAN, vec3(.2, 0.8, 0.8), 0., 0., texture_(0.0, vec3(0.)), texture_(0.0, vec3(0.)));
 
     Quad left = Quad(
         vec3(-3., -2., 5.),
@@ -699,15 +700,76 @@ struct Material {
     return hit_anything;
 }
 
+// world with sphere and light source
+bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
+    // local variables
+    hit_record temp_rec;
+    bool hit_anything = false;
+    float closest_so_far = ray_t.max;
+
+    // materials
+    Material light = Material(LAMBERTIAN, vec3(0.2, 0.2, 1.), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(100.)));
+    Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0., texture_(0.0, vec3(0.2, 0.3, 0.1)),  texture_(0., vec3(0.)));
+    Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
+
+    Sphere ground = Sphere(STATIONARY_SPHERE, 
+                           vec3(0.0, -1000.0, 0.0),
+                           vec3(0.), 
+                           1000.0,
+                           ground_mat);
+
+    Sphere giant_lambertian = Sphere(STATIONARY_SPHERE, 
+                           vec3(0., 2., 0.),
+                           vec3(0.), 
+                           2.0,
+                           material2);
+
+    Quad right = Quad(
+        vec3(3., 1., -2.),
+        vec3(2., 0., 0.),
+        vec3(0., 2., 0.),
+        light
+    );
+
+    if (hit(ground, ground.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit(giant_lambertian, giant_lambertian.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit_quad(right, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+
+
+    // adjust ray interval so that when collision checking for other objects we are aware
+    // if something is within range
+    ray_t.max = closest_so_far;
+
+    return hit_anything;
+}
+
 bool hit_list(Ray r, inout interval ray_t, out hit_record rec) {
     bool hit_spheres = false;
     bool hit_quads = false;
+    bool hit_lights = false;
 
     // hit_spheres = world_spheres(r, ray_t, rec);
 
-    hit_quads = world_quads(r, ray_t, rec);
+    // hit_quads = world_quads(r, ray_t, rec);
 
-    return hit_spheres || hit_quads;
+    hit_lights = world_lights(r, ray_t, rec);
+
+    return hit_spheres || hit_quads || hit_lights;
 }
 
 // returns a vector to a random point on a unit disk

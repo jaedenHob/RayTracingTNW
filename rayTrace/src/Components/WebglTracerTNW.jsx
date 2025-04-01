@@ -7,7 +7,7 @@ import shaders from "./RTTNW support code/shaders/ray_tracer_shaders";
 const WebglTracerTNW = () => {
   // canvas reference
   const canvas_ref = useRef(null);
-  const camera_pos_ref = useRef({ x: 0, y: 0, z: 9 }); // reference of camera position
+  const camera_pos_ref = useRef({ x: -1, y: 2, z: -5 }); // reference of camera position
   const iteration_ref = useRef(0);
 
   var width = 450;
@@ -107,6 +107,7 @@ const WebglTracerTNW = () => {
     requestAnimationFrame(render);
 
     function render() {
+      // console.log(camera_pos_ref.current);
       // increment iteration
       iteration_ref.current++;
 
