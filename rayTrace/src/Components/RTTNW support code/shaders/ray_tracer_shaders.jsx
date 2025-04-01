@@ -1057,10 +1057,10 @@ void main() {
 
     // no linear interpolation on first frame. 
     // (no previous information to work with)
-    // if (iteration < 2.0) {
-    //     fragColor = vec4(result_color, 1.);
-    //     return;
-    // }
+    if (iteration < 2.0) {
+        fragColor = vec4(result_color, 1.);
+        return;
+    } 
 
     // determines the convergence rate of our raytracer. ensure early frames contribute
     // but at the end later frames have less impact on newer frames.

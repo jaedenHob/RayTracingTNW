@@ -156,7 +156,7 @@ const WebglTracerTNW = () => {
 
       // run loop at a reduced speed (5 fps)
       setTimeout(() => {
-        console.log(camera_pos_ref.current);
+        // console.log(camera_pos_ref.current);
         requestAnimationFrame(render);
       }, 140);
     }
@@ -170,7 +170,7 @@ const WebglTracerTNW = () => {
       [name]: parseFloat(value),
     };
 
-    iteration_ref.current = 1;
+    iteration_ref.current = 0;
   };
 
   return (
