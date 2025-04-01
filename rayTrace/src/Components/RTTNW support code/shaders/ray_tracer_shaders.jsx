@@ -914,6 +914,26 @@ vec3 dielectric_scatter(vec3 ray_direction, out vec3 attenuation, hit_record rec
     return direction;
 }
 
+// logic for ray bounce based on sphere material (determine if ray bounced or is absorbed)
+bool calculate_scatter(Ray current_ray, hit_record rec, out vec3 attenuation, out vec3 scatter_direction) {
+    if (rec.mat.type == LAMBERTIAN) { // lambertian scatter
+        scatter_direction = lambertian_scatter(attenuation, rec);
+    } 
+
+    else if (rec.mat.type == METAL) { // metallic scatter
+        bool absorbed = metallic_scatter(scatter_direction, current_ray, attenuation, rec);
+
+        if (!absorbed)
+            return false;
+    }
+
+    else if (rec.mat.type == DIELECTRIC) { // metallic scatter
+        scatter_direction = dielectric_scatter(current_ray.direction, attenuation, rec);
+    }
+
+    return true;
+}
+
 vec3 ray_color(Ray r) {
     hit_record rec;
 
@@ -927,20 +947,8 @@ vec3 ray_color(Ray r) {
         if (hit_list(current_ray, interval(0.001, INFINITY), rec)) {
             
             // logic for ray bounce based on sphere material
-            if (rec.mat.type == LAMBERTIAN) { // lambertian scatter
-                scatter_direction = lambertian_scatter(attenuation, rec);
-            } 
-
-            else if (rec.mat.type == METAL) { // metallic scatter
-                bool absorbed = metallic_scatter(scatter_direction, current_ray, attenuation, rec);
-
-                if (!absorbed)
-                    break;
-            }
-
-            else if (rec.mat.type == DIELECTRIC) { // metallic scatter
-                scatter_direction = dielectric_scatter(current_ray.direction, attenuation, rec);
-            }
+            if (!calculate_scatter(current_ray, rec, attenuation, scatter_direction))
+                break;
 
             current_ray = Ray(rec.p, scatter_direction, psudo_rand(float(bounce) * vec2(43.934, 5.347), psudo_seed)); // create new ray from contact point and follow it
 
