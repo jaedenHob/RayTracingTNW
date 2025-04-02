@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
 import * as twgl from "twgl.js";
-import earth_texture from "../assets/2k_earth_daymap.jpg";
 
 import shaders from "./RTTNW support code/shaders/ray_tracer_shaders";
 
