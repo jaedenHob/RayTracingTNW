@@ -59,10 +59,10 @@ uniform float seedB;
 
 // constants
 #define PI 3.1415926538
-#define INFINITY 100.0
+#define INFINITY 1000.0
 #define MAX_SPHERE 10
 #define RAND_MAX 2147483647.0
-#define MAX_RAY_BOUNCES 5
+#define MAX_RAY_BOUNCES 20
 
 // values we will use when determining matrial type
 #define LAMBERTIAN 0
@@ -676,58 +676,145 @@ bool world_quads(Ray r, inout interval ray_t, out hit_record rec) {
     return hit_anything;
 }
 
-// world with sphere and light source
+// world containing cornel box and possibly different spheres
 bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
     // local variables
     hit_record temp_rec;
     bool hit_anything = false;
     float closest_so_far = ray_t.max;
 
-    // materials
-    Material light = Material(LAMBERTIAN, vec3(1.), 0., 0., texture_(0.0, vec3(0.)),  texture_(DIFFUSE_LIGHT, vec3(4.)));
-    Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0., texture_(0.0, vec3(0.2, 0.3, 0.1)),  texture_(0., vec3(0.)));
-    Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
+    // creating "Cornell Box" that modeled the interaction of light between diffuse surfaces
+    Material red = Material(LAMBERTIAN, vec3(0.65, 0.05, 0.05), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
+    Material black = Material(LAMBERTIAN, vec3(0.), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
+    Material white = Material(LAMBERTIAN, vec3(0.73, 0.73, 0.73), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
+    Material green = Material(LAMBERTIAN, vec3(0.12, 0.45, 0.15), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
+    Material light = Material(LAMBERTIAN, vec3(1., 1., 1.), 0., 0., texture_(0.0, vec3(1., 0.7, 0.)),  texture_(DIFFUSE_LIGHT, vec3(100.)));
 
-    Sphere ground = Sphere(STATIONARY_SPHERE, 
-                           vec3(0.0, -1000.0, 0.0),
-                           vec3(0.), 
-                           1000.0,
-                           ground_mat);
-
-    Sphere giant_lambertian = Sphere(STATIONARY_SPHERE, 
-                           vec3(0., 2., 0.),
-                           vec3(0.), 
-                           2.0,
-                           material2);
-    /*struct Quad {
-    vec3 Q, u, v;
-
-    Material mat;
-};*/
-    Quad glowing_plane = Quad(
-        vec3(2.5, 1., -2.5),
-        vec3(2., 0., 0.),
-        vec3(0., 2., 0.),
-        light
+    Quad left = Quad(
+        vec3(0., 0., 0.),
+        vec3(0., 555., 0.),
+        vec3(0., 0., 555.),
+        green
     );
 
-    if (hit(ground, ground.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+    Quad right = Quad(
+        vec3(555., 0., 0.),
+        vec3(0., 555., 0.),
+        vec3(0., 0., 555.),
+        red
+    );
+
+    Quad upper = Quad(
+        vec3(555., 555., 555.),
+        vec3(-555., 0., 0.),
+        vec3(0., 0., -555.),
+        white
+    );
+
+    Quad lower = Quad(
+        vec3(0., 0., 0.),
+        vec3(555., 0., 0.),
+        vec3(0., 0., 555.),
+        white
+    );
+
+    Quad back = Quad(
+        vec3(0., 0., 555.),
+        vec3(555., 0., 0.),
+        vec3(0., 555., 0.),
+        white
+    );
+
+    Quad light_source = Quad(
+        vec3(440., 554., 332.),
+        vec3(-330., 0., 0.),
+        vec3(0., 0., -305.),
+        light
+    );  
+
+    if (hit_quad(right, r, interval(ray_t.min, closest_so_far), temp_rec)) {
         hit_anything = true;
         closest_so_far = temp_rec.t;
         rec = temp_rec;
     }
 
-    if (hit(giant_lambertian, giant_lambertian.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+    if (hit_quad(left, r, interval(ray_t.min, closest_so_far), temp_rec)) {
         hit_anything = true;
         closest_so_far = temp_rec.t;
         rec = temp_rec;
     }
 
-    if (hit_quad(glowing_plane, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+    if (hit_quad(upper, r, interval(ray_t.min, closest_so_far), temp_rec)) {
         hit_anything = true;
         closest_so_far = temp_rec.t;
         rec = temp_rec;
     }
+
+    if (hit_quad(back, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit_quad(lower, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+    if (hit_quad(light_source, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+        hit_anything = true;
+        closest_so_far = temp_rec.t;
+        rec = temp_rec;
+    }
+
+
+
+//     // materials
+//     Material light = Material(LAMBERTIAN, vec3(1.), 0., 0., texture_(0.0, vec3(0.)),  texture_(DIFFUSE_LIGHT, vec3(4.)));
+//     Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0., texture_(0.0, vec3(0.2, 0.3, 0.1)),  texture_(0., vec3(0.)));
+//     Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
+
+//     Sphere ground = Sphere(STATIONARY_SPHERE, 
+//                            vec3(0.0, -1000.0, 0.0),
+//                            vec3(0.), 
+//                            1000.0,
+//                            ground_mat);
+
+//     Sphere giant_lambertian = Sphere(STATIONARY_SPHERE, 
+//                            vec3(0., 2., 0.),
+//                            vec3(0.), 
+//                            2.0,
+//                            material2);
+//     /*struct Quad {
+//     vec3 Q, u, v;
+
+//     Material mat;
+// };*/
+    // Quad glowing_plane = Quad(
+    //     vec3(2.5, 1., -2.5),
+    //     vec3(2., 0., 0.),
+    //     vec3(0., 2., 0.),
+    //     light
+    // );
+
+//     if (hit(ground, ground.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+//         hit_anything = true;
+//         closest_so_far = temp_rec.t;
+//         rec = temp_rec;
+//     }
+
+//     if (hit(giant_lambertian, giant_lambertian.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+//         hit_anything = true;
+//         closest_so_far = temp_rec.t;
+//         rec = temp_rec;
+//     }
+
+    // if (hit_quad(glowing_plane, r, interval(ray_t.min, closest_so_far), temp_rec)) {
+    //     hit_anything = true;
+    //     closest_so_far = temp_rec.t;
+    //     rec = temp_rec;
+    // }
 
 
 
@@ -829,7 +916,7 @@ Ray get_ray() {
 
 // lambertian scatter function
 vec3 lambertian_scatter(out vec3 color, hit_record rec) {
-    // vec3 direction = rec.normal + random_unit_vector(); original should use this but causes pixel to turn black over time
+    // vec3 direction = rec.normal + random_unit_vector(); // original should use this but causes pixel to turn black over time
     // most likely from components being 0, NaN, or infinite.
 
     vec3 direction = random_unit_vector();
@@ -990,9 +1077,9 @@ void initalize_camera() {
     cam.aspect_ratio = 16.0 / 9.0;
     cam.defocus_angle = 0.;
     cam.focus_dist = 10.0;
-    cam.vfov = 20.0;
+    cam.vfov = 40.0;
     cam.lookfrom = camera_center;
-    cam.lookat = vec3(0., 1., 0.);
+    cam.lookat = vec3(278., 278., 0.);
     cam.vup = vec3(0., -1., 0.);
 
     float image_height = cam.image_width / cam.aspect_ratio;
@@ -1064,7 +1151,7 @@ void main() {
 
     // determines the convergence rate of our raytracer. ensure early frames contribute
     // but at the end later frames have less impact on newer frames.
-    float alpha = ((iteration) / ((iteration) + 1.));
+    float alpha = ((iteration * 0.8) / ((iteration * 0.8) + 1.));
 
     // linear interpolation between past frame and current frame based on current iteration
     vec3 lerp = mix(result_color, previous_color, alpha);

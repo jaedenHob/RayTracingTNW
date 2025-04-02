@@ -7,7 +7,7 @@ import shaders from "./RTTNW support code/shaders/ray_tracer_shaders";
 const WebglTracerTNW = () => {
   // canvas reference
   const canvas_ref = useRef(null);
-  const camera_pos_ref = useRef({ x: -7, y: 3, z: -13 }); // reference of camera position
+  const camera_pos_ref = useRef({ x: 278, y: 278, z: -594 }); // reference of camera position
   const iteration_ref = useRef(0);
 
   var width = 450;
@@ -156,9 +156,9 @@ const WebglTracerTNW = () => {
 
       // run loop at a reduced speed (5 fps)
       setTimeout(() => {
-        // console.log(camera_pos_ref.current);
+        console.log(camera_pos_ref.current);
         requestAnimationFrame(render);
-      }, 140);
+      }, 33.3);
     }
   }, []);
 
@@ -188,8 +188,8 @@ const WebglTracerTNW = () => {
         <label>Position X (left and right):</label>
         <input
           type="range"
-          min="-90"
-          max="90"
+          min="-800"
+          max="800"
           step="0.05"
           name="x"
           defaultValue={camera_pos_ref.current.x}
@@ -198,8 +198,8 @@ const WebglTracerTNW = () => {
         <label>Position Y (up and down):</label>
         <input
           type="range"
-          min="1"
-          max="45"
+          min="-800"
+          max="800"
           step="0.05"
           name="y"
           defaultValue={camera_pos_ref.current.y}
@@ -208,8 +208,8 @@ const WebglTracerTNW = () => {
         <label>Position Z (forward and back):</label>
         <input
           type="range"
-          min="-90"
-          max="90"
+          min="-800"
+          max="800"
           step="0.05"
           name="z"
           defaultValue={camera_pos_ref.current.z}
