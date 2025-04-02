@@ -1151,7 +1151,7 @@ void main() {
 
     // determines the convergence rate of our raytracer. ensure early frames contribute
     // but at the end later frames have less impact on newer frames.
-    float alpha = ((iteration * 0.8) / ((iteration * 0.8) + 1.));
+    float alpha = ((iteration) / ((iteration) + 1.));
 
     // linear interpolation between past frame and current frame based on current iteration
     vec3 lerp = mix(result_color, previous_color, alpha);
