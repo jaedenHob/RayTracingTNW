@@ -92,6 +92,10 @@ The image below is the traditional approach that takes a long time to render and
 
 ![alt text](image-12.png)
 
+## non empty "cornell box"
+
+![alt text](image-13.png)
+
 ## To install just copy the repo then install the dependencies:
 
 `npm install`
