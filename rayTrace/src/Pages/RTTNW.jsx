@@ -10,10 +10,7 @@ const RTTNW = () => {
 
         <RayTracerTNW />
 
-        <p>
-          Final render of the scene of completing the next week of peter
-          shirleys ray tracing tautorials.
-        </p>
+        <p className="m-2">Final scene of a "cornell box"</p>
       </div>
     </>
   );

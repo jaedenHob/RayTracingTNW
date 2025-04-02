@@ -840,13 +840,6 @@ bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
     }
 
     // boxes to be inside cornell box
-
-    // create box A and test ray on it
-    // box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, vec3(130., 0., 65.), vec3(295., 165., 230.), white);
-
-    // create box B and test ray on it
-    // box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, vec3(265., 0., 295.), vec3(430., 330., 460.), white);
-
     box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, 
     vec3(130., 0., 65.), vec3(295., 165., 230.), white, -25.0);
 
