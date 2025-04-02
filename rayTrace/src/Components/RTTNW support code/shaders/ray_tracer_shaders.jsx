@@ -59,7 +59,7 @@ uniform float seedB;
 
 // constants
 #define PI 3.1415926538
-#define INFINITY 1000.0
+#define INFINITY 900.0
 #define MAX_SPHERE 10
 #define RAND_MAX 2147483647.0
 #define MAX_RAY_BOUNCES 20
@@ -676,6 +676,49 @@ bool world_quads(Ray r, inout interval ray_t, out hit_record rec) {
     return hit_anything;
 }
 
+// box generator function
+void box(Ray r, out bool hit_anything, float t_min, out float closest_so_far, out hit_record rec, out hit_record temp_rec, vec3 a, vec3 b, Material white) {
+    // construct opposing vertices
+    vec3 min = vec3(
+        min(a.x, b.x),
+        min(a.y, b.y),
+        min(a.z, b.z)
+    );
+
+    vec3 max = vec3(
+        max(a.x, b.x),
+        max(a.y, b.y),
+        max(a.z, b.z)
+    );
+
+    vec3 dx = vec3(max.x - min.x, 0., 0.);
+    vec3 dy = vec3(0., max.y - min.y, 0.);
+    vec3 dz = vec3(0., 0., max.z - min.z);
+
+    Quad side[6];
+    
+    // front
+    side[0] = Quad(vec3(min.x, min.y, max.z), dx, dy, white);
+    // right
+    side[1] = Quad(vec3(max.x, min.y, max.z), -dz, dy, white);
+    // back
+    side[2] = Quad(vec3(max.x, min.y, min.z), -dx, dy, white);
+    // left
+    side[3] = Quad(vec3(min.x, min.y, min.z), dz,  dy, white);
+    // top
+    side[4] = Quad(vec3(min.x, max.y, max.z), dx,  -dz, white);
+    // bottom
+    side[5] = Quad(vec3(min.x, min.y, min.z),  dx,  dz, white);
+
+    for (int i = 0; i < 6; i++) {
+        if (hit_quad(side[i], r, interval(t_min, closest_so_far), temp_rec)) {
+            hit_anything = true;
+            closest_so_far = temp_rec.t;
+            rec = temp_rec;
+        }
+    }
+}
+
 // world containing cornel box and possibly different spheres
 bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
     // local variables
@@ -768,55 +811,13 @@ bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
         rec = temp_rec;
     }
 
+    // boxes to be inside cornell box
 
+    // create box A and test ray on it
+    box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, vec3(130., 0., 65.), vec3(295., 165., 230.), white);
 
-//     // materials
-//     Material light = Material(LAMBERTIAN, vec3(1.), 0., 0., texture_(0.0, vec3(0.)),  texture_(DIFFUSE_LIGHT, vec3(4.)));
-//     Material ground_mat = Material(LAMBERTIAN, vec3(0.5, 0.5, 0.5), 0., 0., texture_(0.0, vec3(0.2, 0.3, 0.1)),  texture_(0., vec3(0.)));
-//     Material material2 = Material(LAMBERTIAN, vec3(0.4, 0.2, 0.1), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
-
-//     Sphere ground = Sphere(STATIONARY_SPHERE, 
-//                            vec3(0.0, -1000.0, 0.0),
-//                            vec3(0.), 
-//                            1000.0,
-//                            ground_mat);
-
-//     Sphere giant_lambertian = Sphere(STATIONARY_SPHERE, 
-//                            vec3(0., 2., 0.),
-//                            vec3(0.), 
-//                            2.0,
-//                            material2);
-//     /*struct Quad {
-//     vec3 Q, u, v;
-
-//     Material mat;
-// };*/
-    // Quad glowing_plane = Quad(
-    //     vec3(2.5, 1., -2.5),
-    //     vec3(2., 0., 0.),
-    //     vec3(0., 2., 0.),
-    //     light
-    // );
-
-//     if (hit(ground, ground.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-//         hit_anything = true;
-//         closest_so_far = temp_rec.t;
-//         rec = temp_rec;
-//     }
-
-//     if (hit(giant_lambertian, giant_lambertian.radius, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-//         hit_anything = true;
-//         closest_so_far = temp_rec.t;
-//         rec = temp_rec;
-//     }
-
-    // if (hit_quad(glowing_plane, r, interval(ray_t.min, closest_so_far), temp_rec)) {
-    //     hit_anything = true;
-    //     closest_so_far = temp_rec.t;
-    //     rec = temp_rec;
-    // }
-
-
+    // create box B and test ray on it
+    box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, vec3(265., 0., 295.), vec3(430., 330., 460.), white);
 
     // adjust ray interval so that when collision checking for other objects we are aware
     // if something is within range
@@ -828,16 +829,16 @@ bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
 bool hit_list(Ray r, interval ray_t, out hit_record rec) {
     bool hit_spheres = false;
     bool hit_quads = false;
-    bool hit_lights = false;
+    bool hit_cornell = false;
 
     // hit_spheres = world_spheres(r, ray_t, rec);
 
     // hit_quads = world_quads(r, ray_t, rec);
 
-    hit_lights = world_lights(r, ray_t, rec);
+    hit_cornell = world_lights(r, ray_t, rec);
     
     
-    return hit_spheres || hit_quads || hit_lights;
+    return hit_spheres || hit_quads || hit_cornell;
 }
 
 // returns a vector to a random point on a unit disk

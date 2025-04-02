@@ -154,9 +154,9 @@ const WebglTracerTNW = () => {
       frame_buffer1 = frame_buffer2;
       frame_buffer2 = temp;
 
-      // run loop at a reduced speed (5 fps)
+      // run loop at a reduced speed (30 fps)
       setTimeout(() => {
-        console.log(camera_pos_ref.current);
+        // console.log(camera_pos_ref.current);
         requestAnimationFrame(render);
       }, 33.3);
     }
