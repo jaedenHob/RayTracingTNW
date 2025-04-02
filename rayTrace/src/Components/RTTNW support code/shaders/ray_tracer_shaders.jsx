@@ -676,9 +676,30 @@ bool world_quads(Ray r, inout interval ray_t, out hit_record rec) {
     return hit_anything;
 }
 
+// Function to rotate a point around the Y-axis
+vec3 rotateY(vec3 p, vec3 center, float cosTheta, float sinTheta) {
+    vec3 translated = p - center;
+    return vec3(
+        translated.x * cosTheta + translated.z * sinTheta,
+        translated.y,
+        -translated.x * sinTheta + translated.z * cosTheta
+    ) + center;
+}
+
 // box generator function
-void box(Ray r, out bool hit_anything, float t_min, out float closest_so_far, out hit_record rec, out hit_record temp_rec, vec3 a, vec3 b, Material white) {
-    // construct opposing vertices
+void box(Ray r, out bool hit_anything, float t_min, out float closest_so_far, 
+         out hit_record rec, out hit_record temp_rec, vec3 a, vec3 b, 
+         Material white, float angle) {
+
+    // Compute box center
+    vec3 center = (a + b) * 0.5;
+
+    // Rotation angle in radians
+    float theta = radians(angle);
+    float cosTheta = cos(theta);
+    float sinTheta = sin(theta);
+
+    // Apply rotation to all corners
     vec3 min = vec3(
         min(a.x, b.x),
         min(a.y, b.y),
@@ -696,20 +717,26 @@ void box(Ray r, out bool hit_anything, float t_min, out float closest_so_far, ou
     vec3 dz = vec3(0., 0., max.z - min.z);
 
     Quad side[6];
-    
-    // front
-    side[0] = Quad(vec3(min.x, min.y, max.z), dx, dy, white);
-    // right
-    side[1] = Quad(vec3(max.x, min.y, max.z), -dz, dy, white);
-    // back
-    side[2] = Quad(vec3(max.x, min.y, min.z), -dx, dy, white);
-    // left
-    side[3] = Quad(vec3(min.x, min.y, min.z), dz,  dy, white);
-    // top
-    side[4] = Quad(vec3(min.x, max.y, max.z), dx,  -dz, white);
-    // bottom
-    side[5] = Quad(vec3(min.x, min.y, min.z),  dx,  dz, white);
 
+    // Rotate all corners before constructing quads
+    vec3 p1 = rotateY(vec3(min.x, min.y, max.z), center, cosTheta, sinTheta);
+    vec3 p2 = rotateY(vec3(max.x, min.y, max.z), center, cosTheta, sinTheta);
+    vec3 p3 = rotateY(vec3(max.x, min.y, min.z), center, cosTheta, sinTheta);
+    vec3 p4 = rotateY(vec3(min.x, min.y, min.z), center, cosTheta, sinTheta);
+    vec3 p5 = rotateY(vec3(min.x, max.y, max.z), center, cosTheta, sinTheta);
+    vec3 p6 = rotateY(vec3(max.x, max.y, max.z), center, cosTheta, sinTheta);
+    vec3 p7 = rotateY(vec3(max.x, max.y, min.z), center, cosTheta, sinTheta);
+    vec3 p8 = rotateY(vec3(min.x, max.y, min.z), center, cosTheta, sinTheta);
+
+    // Define box faces with rotated points
+    side[0] = Quad(p1, p2 - p1, p5 - p1, white);  // Front
+    side[1] = Quad(p2, p3 - p2, p6 - p2, white);  // Right
+    side[2] = Quad(p3, p4 - p3, p7 - p3, white);  // Back
+    side[3] = Quad(p4, p1 - p4, p8 - p4, white);  // Left
+    side[4] = Quad(p5, p6 - p5, p8 - p5, white);  // Top
+    side[5] = Quad(p1, p4 - p1, p2 - p1, white);  // Bottom
+
+    // Check ray intersections
     for (int i = 0; i < 6; i++) {
         if (hit_quad(side[i], r, interval(t_min, closest_so_far), temp_rec)) {
             hit_anything = true;
@@ -718,6 +745,7 @@ void box(Ray r, out bool hit_anything, float t_min, out float closest_so_far, ou
         }
     }
 }
+
 
 // world containing cornel box and possibly different spheres
 bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
@@ -731,7 +759,7 @@ bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
     Material black = Material(LAMBERTIAN, vec3(0.), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
     Material white = Material(LAMBERTIAN, vec3(0.73, 0.73, 0.73), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
     Material green = Material(LAMBERTIAN, vec3(0.12, 0.45, 0.15), 0., 0., texture_(0.0, vec3(0.)),  texture_(0., vec3(0.)));
-    Material light = Material(LAMBERTIAN, vec3(1., 1., 1.), 0., 0., texture_(0.0, vec3(1., 0.7, 0.)),  texture_(DIFFUSE_LIGHT, vec3(100.)));
+    Material light = Material(LAMBERTIAN, vec3(1., 1., 1.), 0., 0., texture_(0.0, vec3(1., 0.7, 0.)),  texture_(DIFFUSE_LIGHT, vec3(50.)));
 
     Quad left = Quad(
         vec3(0., 0., 0.),
@@ -814,10 +842,16 @@ bool world_lights(Ray r, inout interval ray_t, out hit_record rec) {
     // boxes to be inside cornell box
 
     // create box A and test ray on it
-    box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, vec3(130., 0., 65.), vec3(295., 165., 230.), white);
+    // box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, vec3(130., 0., 65.), vec3(295., 165., 230.), white);
 
     // create box B and test ray on it
-    box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, vec3(265., 0., 295.), vec3(430., 330., 460.), white);
+    // box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, vec3(265., 0., 295.), vec3(430., 330., 460.), white);
+
+    box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, 
+    vec3(130., 0., 65.), vec3(295., 165., 230.), white, -25.0);
+
+    box(r, hit_anything, ray_t.min, closest_so_far, rec, temp_rec, 
+    vec3(265., 0., 295.), vec3(430., 330., 460.), white, 25.0);
 
     // adjust ray interval so that when collision checking for other objects we are aware
     // if something is within range
